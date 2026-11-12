@@ -7,19 +7,19 @@
 //   testhooks.js automated device-test hooks              look.js / sound.js  the engine-side theme (art, sound)
 // All parts share one game object G (state + functions), so each file only needs what it uses.
 import * as THREE from '../vendor/three.module.js';
-import { loadContent } from './content.js';
-import { installWorld } from './world.js';
-import { installFeedback } from './feedback.js';
-import { installPuzzle } from './puzzle.js';
-import { installAim } from './aim.js';
-import { installView } from './view.js';
-import { installOnline } from './online.js';
-import { installHud } from './hud.js';
-import { installMap } from './map.js';
-import { installPartner } from './partner.js';
-import { installGuide } from './guide.js';
-import { installTestHooks } from './testhooks.js';
-import { installPlatform } from './platform.js';
+import { loadContent } from './content.js?v=202611121444';
+import { installWorld } from './world.js?v=202611121444';
+import { installFeedback } from './feedback.js?v=202611121444';
+import { installPuzzle } from './puzzle.js?v=202611121444';
+import { installAim } from './aim.js?v=202611121444';
+import { installView } from './view.js?v=202611121444';
+import { installOnline } from './online.js?v=202611121444';
+import { installHud } from './hud.js?v=202611121444';
+import { installMap } from './map.js?v=202611121444';
+import { installPartner } from './partner.js?v=202611121444';
+import { installGuide } from './guide.js?v=202611121444';
+import { installTestHooks } from './testhooks.js?v=202611121444';
+import { installPlatform } from './platform.js?v=202611121444';
 
 // adaptive resolution: lower it when fps stays low, and raise it again once fps has been stable for a while
 const FPS_LOW = 50, FPS_GOOD = 58, LOW_SECS = 2, GOOD_SECS = 10, RATIO_MIN = 1, RATIO_MAX = 1.5, RATIO_STEP = 0.25;
@@ -27,7 +27,7 @@ const FPS_LOW = 50, FPS_GOOD = 58, LOW_SECS = 2, GOOD_SECS = 10, RATIO_MIN = 1, 
 export async function start() {
   // the PC simulation tests swap in a fake renderer and a fake theme loader here (globalThis.__SIM__); the app never sets it
   const SIM = globalThis.__SIM__ || {};
-  const lookModule = SIM.lookModule ? await SIM.lookModule() : await import('./look.js');
+  const lookModule = SIM.lookModule ? await SIM.lookModule() : await import('./look.js?v=202611121444');
   const G = { P: (window.Capacitor && window.Capacitor.Plugins) || {}, $: id => document.getElementById(id), paused: false };
   installPlatform(G);
   await loadContent(G, THREE, lookModule);

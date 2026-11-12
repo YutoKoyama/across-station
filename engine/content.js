@@ -9,7 +9,7 @@ const UI_FALLBACK = {"hintDoor": "タップで「{room}」へ", "hintTurn": "ス
 
 async function loadStage() {
   const id = (new URLSearchParams(location.search).get('pack') || 'shizuku').replace(/[^\w-]/g, '');
-  const r = await fetch(`packs/${id}/pack.json`);
+  const r = await fetch(`packs/${id}/pack.json?v=202611121444`);
   if (!r.ok) throw new Error('content pack not found: ' + id);
   return r.json();
 }
