@@ -7,7 +7,7 @@ export function installHud(G) {
   const { $, T, UI, fmt, STAGE, ROOMS, roomById, players, camera } = G;
   const LOOK = G.LOOK;
   function updateMap() { if (G.drawMap) G.drawMap(); }
-  if ($('topText')) $('topText').onclick = () => { $('top').classList.toggle('open'); setTimeout(() => measureTop(), 30); }; // the map itself: engine/map.js
+ // the map itself: engine/map.js
   // "いまやること": one concrete next action for the player on screen, from the step and where they are (never the answer)
   function todoLine() {
     const TD = T.todo || {}; if (!G.puzzle) return '';

@@ -5,7 +5,7 @@
 // (rooms side by side, 1 m apart), seen through the walls, a little fainter. Online, 'look' messages bring their direction;
 // the figure turns smoothly toward it. On one phone (A⇄B switch) the other crew member keeps their last direction.
 import * as THREE from '../vendor/three.module.js';
-import { HW, FLOOR } from './world.js?v=202611121509';
+import { HW, FLOOR } from './world.js?v=202611121517';
 
 const COL = 0x7fb8a8, ROOM_PITCH = HW * 2 + 1, SIDE = 1.4, TURN_RATE = 10, MOVE_RATE = 6;
 

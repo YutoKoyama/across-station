@@ -219,3 +219,6 @@ body.look-new:not(.playing) #map, body.look-new:not(.playing) #sideKeys { displa
 body.look-new #notice { top: calc(max(8px, env(safe-area-inset-top)) + var(--topH, 60px) + 80px) !important; }
 body.look-new #mapBigSvg { aspect-ratio: 3.1; }
 body.look-new #map { width: 216px; height: 82px; }
+/* 2026-11-13: the next action is always shown in full (no 2-line clamp, no tap needed) */
+body.look-new #todo { display: block; -webkit-line-clamp: unset; overflow: visible; }
+body.look-new #topText { cursor: default; }
