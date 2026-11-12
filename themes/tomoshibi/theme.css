@@ -1,0 +1,117 @@
+/* Theme "tomoshibi" (灯の残る観測所) - UI = the station's instrument plates. Rules: Documents/宇宙ステーション/美術ガイド.md ch.5
+   No rounded cards, no emoji, 1px hairlines, one chamfered corner (bottom right), amber = action, celadon = partner/comm. */
+body.look-new {
+  --tekkon: #10141F; --ai: #1F2A44; --nibi: #5B6273; --kinari: #E6DDC8; --kohaku: #F2A23A; --seiji: #7FB8A8; --warn: #E0674A;
+  --plate: rgba(13, 18, 32, 0.88); --line: rgba(230, 221, 200, 0.28); --dim: rgba(230, 221, 200, 0.62);
+  --chamfer: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  --chamfer-s: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+  background: #0a0d16; color: var(--kinari);
+  font-family: 'Noto Sans JP', 'Noto Sans CJK JP', system-ui, sans-serif; letter-spacing: 0.04em;
+}
+body.look-new button { font-family: inherit; letter-spacing: 0.06em; -webkit-tap-highlight-color: transparent; }
+body.look-new #vignette { position: fixed; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 85% 70% at 50% 48%, transparent 58%, rgba(5, 7, 12, 0.55) 100%); }
+
+/* top band: role / goal / map / A-B switch */
+body.look-new #top { background: var(--plate); border: 1px solid var(--line); border-radius: 0; clip-path: var(--chamfer); padding: 8px 10px 9px 12px;
+  box-shadow: inset 3px 0 0 var(--kohaku); }
+body.look-new #who { font-size: 11px; color: var(--dim); letter-spacing: 0.08em; }
+body.look-new #goal { font-size: 14px; color: var(--kinari); font-weight: 500; }
+body.look-new #map { gap: 3px; }
+body.look-new #map div { border: 1px solid var(--line); border-radius: 0; color: var(--dim); font-size: 10px; width: 22px; height: 20px; background: transparent; }
+body.look-new #map div.me { background: var(--kohaku); border-color: var(--kohaku); color: var(--tekkon); font-weight: 700; }
+body.look-new #map div .p { border-radius: 0; background: var(--seiji); width: 6px; height: 6px; top: -3px; right: -3px; }
+body.look-new #btnPlayer { background: transparent; border: 1px solid var(--line); border-radius: 0; color: var(--kinari); font-family: monospace; font-size: 12px; padding: 6px 8px; }
+
+/* side buttons: square instrument keys with line icons */
+body.look-new .roundBtn { width: 42px; height: 42px; border-radius: 0; border: 1px solid var(--line); background: var(--plate); color: var(--kinari);
+  display: flex; align-items: center; justify-content: center; padding: 0; clip-path: var(--chamfer-s); }
+body.look-new .roundBtn:active, body.look-new button:active { filter: brightness(1.35); }
+
+/* reticle: four short ticks; the hold gauge (set by the engine) fills the inner circle */
+body.look-new #reticle { border: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-shadow: none; }
+body.look-new #reticle::before { content: ''; position: absolute; left: -11px; top: -11px; width: 36px; height: 36px; --t: rgba(230, 221, 200, 0.85);
+  background:
+    linear-gradient(var(--t), var(--t)) 50% 0 / 2px 8px no-repeat,
+    linear-gradient(var(--t), var(--t)) 50% 100% / 2px 8px no-repeat,
+    linear-gradient(var(--t), var(--t)) 0 50% / 8px 2px no-repeat,
+    linear-gradient(var(--t), var(--t)) 100% 50% / 8px 2px no-repeat; }
+body.look-new #reticle::after { content: ''; position: absolute; left: 6px; top: 6px; width: 2px; height: 2px; background: var(--kinari); }
+body.look-new #reticle.aim::before { --t: var(--kohaku); filter: drop-shadow(0 0 4px rgba(242, 162, 58, 0.7)); }
+
+/* hint pill + copy of a panel's text */
+body.look-new #hint { background: var(--plate); border: 1px solid var(--line); border-radius: 0; clip-path: var(--chamfer-s); color: var(--kinari); font-size: 13px; padding: 7px 14px; }
+body.look-new #hint.read { color: #bfe3d8; background: rgba(9, 20, 24, 0.92); border-color: rgba(127, 184, 168, 0.55); border-radius: 0; font-size: 15px; }
+
+/* partner line: a comm strip */
+body.look-new #partner { background: var(--plate); border: 1px solid var(--line); border-left: 3px solid var(--seiji); border-radius: 0; padding: 6px 12px 6px 6px; clip-path: var(--chamfer-s); }
+body.look-new #partner .av { border-radius: 0; background: transparent; border: 1px solid var(--seiji); color: var(--seiji); font-family: monospace; font-size: 12px; }
+body.look-new #partnerText { color: #bfe3d8; font-size: 12.5px; }
+
+/* notices */
+body.look-new #notice { background: var(--plate) !important; border: 1px solid var(--line) !important; border-left: 3px solid var(--kohaku) !important;
+  border-radius: 0 !important; clip-path: var(--chamfer); color: var(--kinari); }
+body.look-new #noticeClose { background: transparent !important; border: 1px solid var(--line) !important; border-radius: 0 !important; color: var(--kinari) !important; }
+
+/* thrust countdown */
+body.look-new #thrustUI path:first-child { stroke: rgba(230, 221, 200, 0.18); stroke-linecap: butt; }
+body.look-new #thrustArc { stroke: var(--warn); stroke-linecap: butt; }
+body.look-new #thrustNum { font-family: monospace; color: var(--kinari); font-weight: 300; }
+body.look-new #thrustLabel { color: var(--warn); letter-spacing: 0.1em; }
+
+/* full screens: start / pause / settings / done */
+body.look-new #start, body.look-new #done, body.look-new #pause, body.look-new #settings { background: rgba(9, 12, 20, 0.95); }
+body.look-new #start { align-items: stretch; text-align: left; padding: 28px 26px; gap: 14px; }
+body.look-new #start .brand { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); letter-spacing: 0.3em; }
+body.look-new #start .brand .mark { width: 16px; height: 16px; border: 1.5px solid var(--kinari); position: relative; flex: none; }
+body.look-new #start .brand .mark::after { content: ''; position: absolute; inset: 3px; border: 1.5px solid var(--kohaku); border-radius: 50%; }
+body.look-new #start .brand .vol { margin-left: auto; font-family: monospace; font-size: 10px; letter-spacing: 0.15em; }
+body.look-new #start h1 { font-size: 28px; font-weight: 700; letter-spacing: 0.06em; line-height: 1.25; padding-bottom: 10px;
+  background: linear-gradient(var(--kohaku), var(--kohaku)) 0 100% / 56px 2px no-repeat; }
+body.look-new #start p, body.look-new #done p { font-size: 14px; line-height: 1.75; opacity: 1; color: rgba(230, 221, 200, 0.86); }
+body.look-new #startHowto { color: var(--dim) !important; font-size: 12.5px !important; border-left: 1px solid var(--line); padding-left: 10px; }
+body.look-new #start button, body.look-new #done button, body.look-new #pause button { border-radius: 0; clip-path: var(--chamfer); }
+body.look-new #btnStart, body.look-new #btnAgain, body.look-new #btnResume { background: var(--kohaku); color: var(--tekkon); font-weight: 700; font-size: 17px; padding: 15px 28px; border: 0; }
+body.look-new #btnStart { align-self: stretch; }
+body.look-new #start a { color: var(--dim); text-align: center; }
+body.look-new #onlineBox { border: 1px solid var(--line); border-radius: 0; align-items: stretch; clip-path: var(--chamfer); }
+body.look-new #onlineBox > div:first-child { color: var(--dim); }
+body.look-new #onlineBox button { background: transparent; border: 1px solid var(--line); border-radius: 0; color: var(--kinari); flex: 1; }
+body.look-new #onlineBox input { border-radius: 0; border: 1px solid var(--line); background: #0b0f1a; color: var(--kinari); font-family: monospace; }
+body.look-new #onlineMsg { color: var(--kohaku); }
+body.look-new #done { gap: 16px; }
+body.look-new #doneTitle { font-size: 24px !important; font-weight: 700; letter-spacing: 0.12em; padding-bottom: 10px;
+  background: linear-gradient(var(--kohaku), var(--kohaku)) 50% 100% / 56px 2px no-repeat; }
+body.look-new #pause > div:first-child { font-size: 18px; letter-spacing: 0.3em; }
+body.look-new #settings > div:first-child { letter-spacing: 0.3em; }
+body.look-new #settings button { background: transparent; border: 1px solid var(--line); border-radius: 0; color: var(--kinari); clip-path: var(--chamfer-s); }
+body.look-new #settings button.on { background: rgba(242, 162, 58, 0.16); border-color: var(--kohaku); }
+body.look-new #settings #btnSettingsClose { background: var(--kohaku) !important; color: var(--tekkon); font-weight: 700; border: 0; }
+body.look-new #settings .debug { color: var(--dim); font-family: monospace; }
+body.look-new #settings input[type=range] { accent-color: var(--kohaku); }
+body.look-new #stampMenu button { background: var(--plate); border: 1px solid var(--line); border-radius: 0; color: var(--kinari); clip-path: var(--chamfer-s); }
+
+/* --- polish (AI-look checklist, 2026-11-10) --- */
+/* the 45-degree corner cut also cut the 1px frame away: draw the missing diagonal so the frame reads as one plate */
+/* (only in-flow boxes get position:relative - the fixed bars/buttons already anchor their ::after) */
+body.look-new #onlineBox, body.look-new #onlineBox button, body.look-new #settings button, body.look-new #stampMenu button { position: relative; }
+body.look-new #onlineBox::after, body.look-new #top::after, body.look-new #notice::after { --cut: 10px; }
+body.look-new #onlineBox::after, body.look-new #onlineBox button::after, body.look-new #settings button::after, body.look-new #stampMenu button::after,
+body.look-new #hint::after, body.look-new #partner::after, body.look-new #notice::after, body.look-new #top::after, body.look-new .roundBtn::after {
+  content: ''; position: absolute; right: 0; bottom: 0; width: var(--cut, 7px); height: var(--cut, 7px); pointer-events: none;
+  background: linear-gradient(to bottom right, transparent calc(50% - 0.8px), var(--line) calc(50% - 0.8px), var(--line) calc(50% + 0.8px), transparent calc(50% + 0.8px)); }
+body.look-new #hint:empty::after { display: none; }
+/* no orphaned single characters at the end of a paragraph */
+body.look-new p, body.look-new #noticeText, body.look-new #goal, body.look-new #hint { text-wrap: pretty; }
+/* short buttons stay on one line */
+body.look-new #onlineBox button { white-space: nowrap; padding: 10px 8px; }
+/* the developer link is quiet: it is not part of the game */
+body.look-new #start a { opacity: 0.45; text-decoration: none; font-size: 11px; letter-spacing: 0.1em; }
+/* settings: volume row (P16) */
+body.look-new #volRow { gap: 10px; }
+body.look-new #volRow #volLabel { min-width: 3em; color: var(--kinari); }
+body.look-new #volRow #volVal { min-width: 3.2em; text-align: right; font-family: monospace; color: var(--dim); }
+body.look-new #vol { accent-color: var(--kohaku); }
+
+/* dial turning hint (first few turns): two curved arrows around the reticle, rocking like a steering wheel */
+body.look-new #turnHint { color: var(--kohaku); opacity: 0.85; filter: drop-shadow(0 0 6px rgba(242, 162, 58, 0.45)); }
