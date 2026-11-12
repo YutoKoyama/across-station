@@ -1,6 +1,6 @@
 // ---------- aiming + dial turning (phone roll like a steering wheel) + the thrust ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121507';
+import { faceYaw } from './world.js?v=202611121509';
 
 export const HOLD_SEC = 1.5;
 const THRUST_SEC = 3, THRUST_YAW_TOL = 25, THRUST_PITCH_TOL = 35;

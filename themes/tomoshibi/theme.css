@@ -218,3 +218,4 @@ body.look-new #map::after { right: 8px; bottom: 1px; }
 body.look-new:not(.playing) #map, body.look-new:not(.playing) #sideKeys { display: none; }
 body.look-new #notice { top: calc(max(8px, env(safe-area-inset-top)) + var(--topH, 60px) + 80px) !important; }
 body.look-new #mapBigSvg { aspect-ratio: 3.1; }
+body.look-new #map { width: 216px; height: 82px; }

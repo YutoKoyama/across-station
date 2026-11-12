@@ -43,7 +43,7 @@ export function installMap(G) {
     // room name on the floor
     const [cx, cy] = big ? iso(x0 + 0.5, 0.86) : iso(x0 + 0.5, 0.9);
     const name = R.name;
-    s += `<text x="${cx.toFixed(3)}" y="${cy.toFixed(3)}" font-size="${big ? 0.15 : 0.2}" text-anchor="middle" fill="${meHere ? '#F2A23A' : 'rgba(230,221,200,0.7)'}" font-weight="700" style="letter-spacing:0.02em">${name}</text>`;
+    s += `<text x="${cx.toFixed(3)}" y="${cy.toFixed(3)}" font-size="${big ? 0.15 : 0.17}" text-anchor="middle" fill="${meHere ? '#F2A23A' : 'rgba(230,221,200,0.7)'}" font-weight="700" style="letter-spacing:0.02em">${name}</text>`;
     return s;
   }
   function doorShapes(R) { // a short corridor to the room on the right
@@ -56,17 +56,17 @@ export function installMap(G) {
     const same = players.A.room === players.B.room;
     const off = same ? (k === 'A' ? -0.2 : 0.2) : 0; // same side as the figure in the room: A left, B right
     const [X, Y] = iso(roomX(R) + 0.5 + off, 0.45);
-    const mine = k === meKey(), col = mine ? '#F2A23A' : '#7FB8A8', r = big ? 0.085 : 0.12;
+    const mine = k === meKey(), col = mine ? '#F2A23A' : '#7FB8A8', r = big ? 0.085 : 0.13;
     const yaw = mine ? G.myYaw() : p.yaw;
     let s = `<g id="mk${k}${big ? 'B' : ''}" transform="translate(${X.toFixed(3)},${Y.toFixed(3)})">`;
-    if (yaw !== undefined && yaw !== null) s += `<polygon class="cone" points="${cone(yaw, big)}" fill="${col}" opacity="0.45"/>`;
+    if (yaw !== undefined && yaw !== null) s += `<polygon class="cone" points="${cone(yaw, big)}" fill="${col}" opacity="0.6"/>`;
     s += `<circle r="${r}" fill="${col}" stroke="#10141F" stroke-width="0.02"/>`;
     s += `<text y="${(r * 0.36).toFixed(3)}" font-size="${(r * 1.15).toFixed(3)}" text-anchor="middle" fill="#10141F" font-weight="700">${k}</text>`;
     if (big) s += `<text y="${(-r - 0.05).toFixed(3)}" font-size="0.09" text-anchor="middle" fill="${col}" font-weight="700">${mine ? (M.you || 'あなた') : (M.partner || '相手')}</text>`;
     return s + '</g>';
   }
   function cone(yaw, big) { // a wedge pointing where that person is looking
-    const L = big ? 0.34 : 0.36, w = 0.42;
+    const L = big ? 0.38 : 0.44, w = 0.45;
     const a = isoDir(yaw - w), b = isoDir(yaw + w);
     return P([[0, 0], [a[0] * L, a[1] * L], [b[0] * L, b[1] * L]]);
   }
