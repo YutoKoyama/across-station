@@ -6,10 +6,25 @@ const SENSOR_WAIT_MS = 3000;            // if no orientation data by then, offer
 export function installHud(G) {
   const { $, T, UI, fmt, STAGE, ROOMS, roomById, players, camera } = G;
   const LOOK = G.LOOK;
-  function updateMap() {
-    const other = G.cur === 'A' ? 'B' : 'A';
-    $('map').innerHTML = ROOMS.map(R => `<div class="${players[G.cur].room === R.id ? 'me' : ''}" title="${R.name}">${R.name[0]}${players[other].room === R.id ? '<span class="p"></span>' : ''}</div>`).join('');
+  function updateMap() { if (G.drawMap) G.drawMap(); } // the map itself: engine/map.js
+  // "いまやること": one concrete next action for the player on screen, from the step and where they are (never the answer)
+  function todoLine() {
+    const TD = T.todo || {}; if (!G.puzzle) return '';
+    const me = players[G.cur], here = me.room, home = roomById[me.start].name;
+    const PL = STAGE.placement, cmd = roomById[PL.commRoom].name, tbl = roomById[PL.codeTableRoom].name;
+    if (G.isStep('crossValves')) return me.result === true ? TD.valveDone : TD.valve;
+    if (G.isStep('vibrationCode')) {
+      if (!G.puzzle.codePlayed) return here === PL.commRoom ? TD.codeAtPanel : fmt(TD.codeGo, { cmd });
+      return fmt(TD.codeHeard, { cmd, tbl });
+    }
+    if (G.isStep('thrust')) return me.thrust ? TD.thrustDone : here !== me.start ? fmt(TD.thrustGo, { cmd, home }) : TD.thrustAt;
+    return TD.end || '';
   }
+  G.shownTodo = null;
+  function updateTodo() { const t = todoLine() || ''; if (t === G.shownTodo) return; G.shownTodo = t; $('todo').textContent = t; measureTop(); }
+  // the band's height changes with the text: keys and notices below it follow (CSS var --topH)
+  function measureTop() { try { const h = $('top').offsetHeight; if (h) document.documentElement.style.setProperty('--topH', h + 'px'); } catch (e) {} }
+  if (typeof addEventListener === 'function') addEventListener('resize', () => setTimeout(measureTop, 50));
   const ROLE = Object.fromEntries(Object.entries(STAGE.roles).map(([k, r]) => [k, r.label]));
   // partner bubble: shows what the OTHER crew member is doing (their state only; never the answer).
   // In the online version (⑦) this is where the partner's quick messages appear.
@@ -34,8 +49,8 @@ export function installHud(G) {
     const m = k => G.puzzle && G.reached('thrust') ? (players[k].thrust ? '◆' : '…') : s(players[k].result);
     $('btnPlayer').textContent = `${G.cur}⇄${G.cur === 'A' ? 'B' : 'A'}`;
     $('btnPlayer').title = `A${m('A')} B${m('B')}`;
-    $('who').textContent = ROLE[G.cur];
-    updateMap(); updatePartner();
+    $('who').textContent = fmt(UI.youAre || '{role}', { role: ROLE[G.cur] });
+    updateMap(); updatePartner(); updateTodo();
   }
   // gentle notices (not blocking the game)
   let noticeTimer = null;
@@ -43,7 +58,7 @@ export function installHud(G) {
     $('noticeText').textContent = G.clean(text); $('notice').style.display = 'block';
     clearTimeout(noticeTimer); if (autoHide) noticeTimer = setTimeout(() => { $('notice').style.display = 'none'; }, NOTICE_AUTO_HIDE_MS);
   }
-  Object.assign(G, { updateMap, updatePartner, updateStatus, notice });
+  Object.assign(G, { updateMap, updatePartner, updateStatus, updateTodo, notice });
 
   // ---------- buttons and screens ----------
   { // art guide: own line icons instead of emoji (stroke 1.75, square caps)
@@ -90,7 +105,7 @@ export function installHud(G) {
   $('noticeClose').onclick = () => { $('notice').style.display = 'none'; };
   let playStart = null, restShown = false;
   // taps that start play also unlock what browsers keep locked until a tap: sound, the iPhone tilt sensor, screen-on
-  const unlockByTap = () => { G.askSensorPermission(); G.unlockAudio(); G.keepAwake(); };
+  const unlockByTap = () => { G.askSensorPermission(); G.unlockAudio(); G.keepAwake(); G.lockPortrait(); };
   $('btnStart').onclick = () => { unlockByTap(); startGame(); };
   async function startGame() {
     $('start').style.display = 'none';
@@ -98,6 +113,7 @@ export function installHud(G) {
     try { if (G.P.ScreenOrientation) await G.P.ScreenOrientation.lock({ orientation: 'portrait' }); } catch (err) {}
     G.recenterPending = true; G.haptic('tick');
     playStart = performance.now();
+    if (G.maybeGuide) G.maybeGuide(); // first time on this phone: what each part of the screen is
     setTimeout(() => { if (!G.gotSensor && !G.touchMode) { G.setTouchMode(true); notice(UI.noticeNoSensor); } }, SENSOR_WAIT_MS);
   }
   G.startGame = startGame;

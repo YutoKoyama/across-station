@@ -15,6 +15,9 @@ import { installAim } from './aim.js';
 import { installView } from './view.js';
 import { installOnline } from './online.js';
 import { installHud } from './hud.js';
+import { installMap } from './map.js';
+import { installPartner } from './partner.js';
+import { installGuide } from './guide.js';
 import { installTestHooks } from './testhooks.js';
 import { installPlatform } from './platform.js';
 
@@ -35,12 +38,15 @@ export async function start() {
   installView(G);
   installOnline(G);
   installHud(G);
+  installMap(G);
+  installPartner(G);
+  installGuide(G);
   if (!G.publicWeb) installTestHooks(G); // the published web build has no test hooks
 
   // ---------- loop ----------
   const { renderer, scene, camera, $ } = G;
   let lowCount = 0, goodCount = 0, lastAction = null, raiseBlocked = false;
-  function applyRatio(cap) { G.pixelRatioCap = cap; renderer.setPixelRatio(Math.min(window.devicePixelRatio, cap)); renderer.setSize(innerWidth, innerHeight); }
+  function applyRatio(cap) { G.pixelRatioCap = cap; renderer.setPixelRatio(Math.min(window.devicePixelRatio, cap)); renderer.setSize(G.viewW(), G.viewH()); }
   function adaptResolution(fps) {
     lowCount = fps < FPS_LOW ? lowCount + 1 : 0;
     goodCount = fps >= FPS_GOOD ? goodCount + 1 : 0;
@@ -60,13 +66,14 @@ export async function start() {
     G.gameClock += dt; G.lastLoopReal = performance.now();
     G.updateCamera(dt); G.updateAim(dt); G.loopCount++;
     G.LOOK.update(dt, G.starDrift);
+    G.tickMap(); G.tickPartner(dt);
     renderer.render(scene, camera);
     frames++;
     if (now - t0 >= 1000) {
       const fps = frames * 1000 / (now - t0); frames = 0; t0 = now;
       $('fps').textContent = fps.toFixed(0) + ' fps';
       adaptResolution(fps);
-      G.updatePartner();
+      G.updatePartner(); G.updateTodo();
       $('res').textContent = '解像度×' + renderer.getPixelRatio().toFixed(2);
       $('info').textContent = `${G.cur}：${G.roomById[G.players[G.cur].room].name}\n` + (G.touchMode ? '指で見回し' : (G.gotSensor ? 'センサー' : 'センサー待ち'));
     }

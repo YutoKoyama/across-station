@@ -19,13 +19,13 @@ export function installWorld(G, Renderer, createLook) {
   const renderer = new Renderer({ antialias: true, powerPreference: 'high-performance' });
   G.pixelRatioCap = 1.5;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, G.pixelRatioCap));
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(G.viewW(), G.viewH());
   document.body.prepend(renderer.domElement);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x02030a);
-  const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 200);
+  const camera = new THREE.PerspectiveCamera(75, G.viewW() / G.viewH(), 0.05, 200);
   camera.position.set(0, 0, 0); // eye position is fixed: look-around only
-  addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+  addEventListener('resize', () => { camera.aspect = G.viewW() / G.viewH(); camera.updateProjectionMatrix(); renderer.setSize(G.viewW(), G.viewH()); });
   const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x202030, 1.15); scene.add(hemi);
   G.hemiBase = hemi.color.clone();
   Object.assign(G, { renderer, scene, camera, hemi });

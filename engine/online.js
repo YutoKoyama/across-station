@@ -117,6 +117,7 @@ export function installOnline(G) {
       case 'judge': { const v = valves[m.i]; if (!v) break; G.setValveIdx(v, m.idx); G.applyJudge(v, m.ok, false); break; }
       case 'code': G.puzzle.codePlayed = Math.max(G.puzzle.codePlayed, m.n || 1); G.updatePartner(); break;
       case 'thrust': { const p = players[m.who]; p.holding = !!m.holding; if (m.done) { p.thrust = true; G.updateStatus(); if (players.A.thrust && players.B.thrust) G.completeStep('thrust'); } G.updatePartner(); break; }
+      case 'look': players[m.who].yaw = m.yaw; if (m.pitch !== undefined) players[m.who].pitch = m.pitch; if (G.onPartnerLook) G.onPartnerLook(); if (G.onPartnerMoved) G.onPartnerMoved(); break;
       case 'stamp': G.partnerStamp = { text: m.text, until: performance.now() + STAMP_SHOW_MS }; G.shownPartner = null; G.updatePartner(); G.haptic('tick'); break;
     }
   }

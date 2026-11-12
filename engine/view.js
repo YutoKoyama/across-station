@@ -13,7 +13,7 @@ export function installView(G) {
   const sensorQ = new THREE.Quaternion(), yawOffset = new THREE.Quaternion(), targetQ = new THREE.Quaternion(), smoothQ = new THREE.Quaternion();
   function readSensorQuat(out) {
     const a = deg(ori.alpha || 0), b = deg(ori.beta || 0), g = deg(ori.gamma || 0);
-    const o = deg((screen.orientation && screen.orientation.angle) || 0);
+    const o = deg(G.screenAngle ? G.screenAngle() : ((screen.orientation && screen.orientation.angle) || 0));
     euler.set(b, a, -g, 'YXZ'); out.setFromEuler(euler); out.multiply(q1); out.multiply(q0.setFromAxisAngle(zee, -o)); return out;
   }
   G.touchMode = false; let tYaw = 0, tPitch = 0;
@@ -63,7 +63,7 @@ export function installView(G) {
   let down = null, lastXY = null;
   addEventListener('pointerdown', e => { if (e.target !== renderer.domElement) return; down = { x: e.clientX, y: e.clientY, t: performance.now() }; lastXY = [e.clientX, e.clientY]; });
   addEventListener('pointermove', e => { if (!lastXY) return;
-    if (G.touchMode) { const k = camera.fov / innerHeight * Math.PI / 180; tYaw += (e.clientX - lastXY[0]) * k; tPitch = Math.max(-1.4, Math.min(1.4, tPitch + (e.clientY - lastXY[1]) * k)); }
+    if (G.touchMode) { const k = camera.fov / G.viewH() * Math.PI / 180; const [dx, dy] = G.toContentDelta(e.clientX - lastXY[0], e.clientY - lastXY[1]); tYaw += dx * k; tPitch = Math.max(-1.4, Math.min(1.4, tPitch + dy * k)); }
     lastXY = [e.clientX, e.clientY]; });
   addEventListener('pointerup', e => {
     const aimed = G.aimed;
@@ -74,7 +74,7 @@ export function installView(G) {
   // ---------- moving between rooms: 0.3 s fade, view direction kept ----------
   let moving = false;
   async function fadeSwap(fn) { if (moving) return; moving = true; $('fade').style.opacity = 1; await sleep(150); fn(); await sleep(30); $('fade').style.opacity = 0; await sleep(150); moving = false; }
-  function showRoom(id) { for (const R of ROOMS) R.group.visible = (R.id === id); G.updateMap(); G.LOOK.enterRoom(roomById[id]); }
+  function showRoom(id) { for (const R of ROOMS) R.group.visible = (R.id === id); G.partnerJump = true; G.updateMap(); G.LOOK.enterRoom(roomById[id]); }
   function goThrough(to) { G.sfx('doorOpen', { vol: 0.5 }); G.sfx('doorClose', { vol: 0.35, delay: 0.32 }); fadeSwap(() => { players[G.cur].room = to; showRoom(to); G.grabbed = null; G.haptic('door'); G.netSend({ t: 'room', who: G.cur, room: to }); }); }
   function showPlayer(k, fade = true) {
     const f = () => { G.cur = k; showRoom(players[k].room); G.recenterPending = true; if (G.touchMode) recenter(); G.grabbed = null; G.updateStatus(); };

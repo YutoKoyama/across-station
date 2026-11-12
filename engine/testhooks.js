@@ -37,7 +37,7 @@ export function installTestHooks(G) {
   const meshOf = t => t.plate || t; // dial -> its plate, panel -> the panel mesh
   const doorOf = to => interactive.find(i => i.type === 'door' && i.room === players[G.cur].room && i.to === to);
   window.__ssTest = {
-    enable() { G.testMode = true; const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = 'テストモード';
+    enable() { G.testMode = true; if (G.hideGuide) G.hideGuide(); const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = 'テストモード';
       b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:4px;background:#b45309;color:#fff;font-size:11px;padding:2px 8px;border-radius:8px;z-index:50';
       document.body.appendChild(b); return true; },
     disable() { G.testMode = false; const b = document.getElementById('testBadge'); if (b) b.remove(); G.recenterPending = true; return true; },
