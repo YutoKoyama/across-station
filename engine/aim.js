@@ -21,6 +21,25 @@ export function installAim(G) {
     return -THREE.MathUtils.radToDeg(Math.atan2(vC.dot(vF), vU.dot(vW))); // + = phone turned clockwise (as the player sees it)
   }
   G.aimed = null; G.grabbed = null;
+  // ---------- dial focus (2026-11-12): tap a dial -> the view locks onto it (close-up), a phone sign turns with your real phone ----------
+  // On a phone, a dial turns only while it is held this way (tests and the PC simulation keep the old aim-and-turn).
+  G.focus = null; let focusRoll0 = 0, focusOkTimer = null;
+  G.focusRequired = () => (G.phoneWeb || G.native) && !G.testMode;
+  const canTurn = v => !G.focusRequired() || G.focus === v;
+  const focusQ = new THREE.Quaternion(), fM = new THREE.Matrix4(), fP = new THREE.Vector3(), ORIGIN = new THREE.Vector3();
+  function enterFocus(v) {
+    if (!v || v.locked) return;
+    v.plate.getWorldPosition(fP); fM.lookAt(ORIGIN, fP, Y); focusQ.setFromRotationMatrix(fM); G.focusQ = focusQ;
+    G.focus = v; focusRoll0 = cameraRollCW(); turnedThisGrab = false;
+    $('dialUI').style.display = 'flex'; $('hint').style.visibility = 'hidden'; G.haptic('tick'); G.sfx('ui', { vol: 0.4 });
+  }
+  function exitFocus() {
+    if (!G.focus) return; clearTimeout(focusOkTimer);
+    if (G.focus.wheel) settling.add(G.focus);
+    G.focus = null; G.grabbed = null; holdT = 0; $('dialUI').style.display = 'none'; $('hint').style.visibility = '';
+  }
+  G.enterFocus = enterFocus; G.exitFocus = exitFocus;
+  if ($('dialBack')) $('dialBack').onclick = exitFocus;
   let lastRoll = 0, raw = 0, notchAt = 0, holdT = 0, offT = 0, evaluated = false, turnedThisGrab = false, turnsDone = 0;
   const settling = new Set(); // wheels easing back onto their notch after the hand let go
   const wheelAngle = v => -v.wheel.rotation.z * 180 / Math.PI;
@@ -51,7 +70,7 @@ export function installAim(G) {
     if (item.type === 'door') return fmt(UI.hintDoor, { room: roomById[item.to].name });
     if (item.type === 'valve') {
       const v = item.valve;
-      if (!v.locked) return fmt(UI.hintTurn, { sym: v.symbols[v.idx] });
+      if (!v.locked) return canTurn(v) ? fmt(UI.hintTurn, { sym: v.symbols[v.idx] }) : (UI.hintTapDial || 'タップでバルブを持つ');
       return v.kind === 'code' && !G.reached('vibrationCode') ? UI.hintNoPower : UI.hintLocked;
     }
     return item.text || '';
@@ -77,6 +96,7 @@ export function installAim(G) {
     const owner = G.valveOwner(v);
     const ok = v.kind === 'code' ? v.symbols[v.idx] === G.puzzle.code[v.codeIndex] : !!owner && v.symbols[v.idx] === owner.targetSymbol;
     applyJudge(v, ok, true);
+    if (ok && G.focus === v) { clearTimeout(focusOkTimer); focusOkTimer = setTimeout(() => { if (G.focus === v) exitFocus(); }, 1300); }
     G.netSend({ t: 'judge', i: valves.indexOf(v), idx: v.idx, ok });
   }
   function applyJudge(v, ok, local) {
@@ -133,7 +153,8 @@ export function installAim(G) {
     const c = aimCache[players[G.cur].room];
     if (!c) return;
     const hits = raycaster.intersectObjects(c.meshes, false);
-    const aimed = G.aimed = hits.length && hits[0].distance < AIM_MAX_DIST ? c.items[c.meshes.indexOf(hits[0].object)] : null;
+    let aimed = G.aimed = hits.length && hits[0].distance < AIM_MAX_DIST ? c.items[c.meshes.indexOf(hits[0].object)] : null;
+    if (G.focus) { if (G.focus.room !== players[G.cur].room || G.focus.locked) exitFocus(); else aimed = G.aimed = interactive.find(i => i.valve === G.focus) || aimed; }
     const p = players[G.cur];
     const thrusting = G.isStep('thrust') && !p.thrust && p.room === p.start;
     // while a thrust is being held, a door in that direction must not light up or say "tap to go" (taps are ignored then)
@@ -142,7 +163,7 @@ export function installAim(G) {
     setAimVisual(shown);
     setHint(holdingThrust ? '' : shown ? hintFor(shown) : (thrusting ? T.thrustHint : ''), shown && (shown.type === 'read' || shown.type === 'comm'));
 
-    const onValve = aimed && aimed.type === 'valve' && !aimed.valve.locked;
+    const onValve = aimed && aimed.type === 'valve' && !aimed.valve.locked && canTurn(aimed.valve);
     const onComm = aimed && aimed.type === 'comm' && G.reached('vibrationCode');
     if (onValve || onComm) offT = 0; else offT += dt;
     const target = onValve ? aimed.valve : onComm ? aimed : null;
@@ -176,6 +197,10 @@ export function installAim(G) {
         holdT += dt; prog = Math.min(1, holdT / HOLD_SEC);
         if (holdT >= HOLD_SEC) { evaluated = true; prog = 0; judgeDial(grabbed); }
       }
+    }
+    if (G.focus) {
+      const ph = $('dialPhone'); if (ph) ph.style.transform = `rotate(${(cameraRollCW() - focusRoll0).toFixed(1)}deg)`;
+      const sym = $('dialSym'); if (sym) sym.textContent = G.focus.symbols[G.focus.idx];
     }
     settleWheels(dt);
     setTurnHint(!!(grabbed && grabbed.wheel && !turnedThisGrab && turnsDone < HINT_TURNS && !evaluated));

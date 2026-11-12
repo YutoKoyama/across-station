@@ -6,7 +6,8 @@ const SENSOR_WAIT_MS = 3000;            // if no orientation data by then, offer
 export function installHud(G) {
   const { $, T, UI, fmt, STAGE, ROOMS, roomById, players, camera } = G;
   const LOOK = G.LOOK;
-  function updateMap() { if (G.drawMap) G.drawMap(); } // the map itself: engine/map.js
+  function updateMap() { if (G.drawMap) G.drawMap(); }
+  if ($('topText')) $('topText').onclick = () => { $('top').classList.toggle('open'); setTimeout(() => measureTop(), 30); }; // the map itself: engine/map.js
   // "いまやること": one concrete next action for the player on screen, from the step and where they are (never the answer)
   function todoLine() {
     const TD = T.todo || {}; if (!G.puzzle) return '';
@@ -101,7 +102,7 @@ export function installHud(G) {
   $('btnPause').onclick = () => { G.paused = true; G.hq.length = 0; G.codePlaying = false; if (G.SOUND()) LOOK.duck(false); $('pause').style.display = 'flex'; LOOK.pause(true); LOOK.loop('thrust', false); };
   $('btnResume').onclick = () => { G.paused = false; $('pause').style.display = 'none'; LOOK.pause(false); G.sfx('ui', { vol: 0.5 }); };
   $('btnAgain').onclick = () => { $('done').style.display = 'none'; G.newPuzzle(); };
-  $('fov').oninput = e => { camera.fov = +e.target.value; camera.updateProjectionMatrix(); $('fovVal').textContent = e.target.value + '°'; };
+  $('fov').oninput = e => { G.baseFov = +e.target.value; camera.fov = +e.target.value; camera.updateProjectionMatrix(); $('fovVal').textContent = e.target.value + '°'; };
   $('noticeClose').onclick = () => { $('notice').style.display = 'none'; };
   let playStart = null, restShown = false;
   // taps that start play also unlock what browsers keep locked until a tap: sound, the iPhone tilt sensor, screen-on

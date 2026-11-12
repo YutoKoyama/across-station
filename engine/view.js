@@ -47,14 +47,20 @@ export function installView(G) {
   // (turning with the phone) seemed to stand still. While a dial is held the camera keeps only yaw + pitch: the room
   // stays level and the wheel visibly turns with your hand. The phone's real roll (G.rawQ) still drives the dial.
   const ROLL_LOCK_RATE = 20; // how fast the view levels / un-levels (1/s): 95 % in about 0.15 s
-  const rawQ = new THREE.Quaternion(), lockE = new THREE.Euler(); let rollK = 0;
+  const rawQ = new THREE.Quaternion(), lockE = new THREE.Euler(); let rollK = 0, focusK = 0;
+  const FOCUS_RATE = 9, FOCUS_FOV = 46; // ~0.3 s to settle on the dial; the dial fills most of the width
   function levelWhileTurning(dt) {
     rawQ.copy(camera.quaternion); G.rawQ = rawQ;
     const turning = !!(G.grabbed && G.grabbed.wheel); // a dial, not the comm panel
     rollK += ((turning ? 1 : 0) - rollK) * Math.min(1, dt * ROLL_LOCK_RATE);
     G.viewLevel = rollK;
-    if (rollK < 0.001) return;
-    lockE.setFromQuaternion(rawQ, 'YXZ'); lockE.z *= 1 - rollK; camera.quaternion.setFromEuler(lockE);
+    if (rollK >= 0.001) { lockE.setFromQuaternion(rawQ, 'YXZ'); lockE.z *= 1 - rollK; camera.quaternion.setFromEuler(lockE); }
+    // dial focus: the view eases onto the held dial and zooms in; the phone's own turning (rawQ) still drives the dial
+    focusK += ((G.focus ? 1 : 0) - focusK) * Math.min(1, dt * FOCUS_RATE);
+    if (G.baseFov === undefined) G.baseFov = camera.fov;
+    if (focusK > 0.001 && G.focusQ) camera.quaternion.slerp(G.focusQ, focusK);
+    const fov = G.baseFov + (FOCUS_FOV - G.baseFov) * focusK;
+    if (Math.abs(fov - camera.fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   }
   function setTouchMode(on) { G.touchMode = on; const b = $('btnTouch'); b.textContent = G.fmt(G.UI.touchLabel, { v: on ? G.UI.on : G.UI.off }); b.classList.toggle('on', on);
     if (on) { tYaw = faceYaw(players[G.cur].face); tPitch = 0; } else G.recenterPending = true; }
@@ -68,7 +74,9 @@ export function installView(G) {
   addEventListener('pointerup', e => {
     const aimed = G.aimed;
     const thrustHeld = G.puzzle && G.isStep('thrust') && players[G.cur].thrustT > 0;
-    if (!thrustHeld && down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 12 && performance.now() - down.t < 500 && aimed && aimed.type === 'door') goThrough(aimed.to);
+    const tap = down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 12 && performance.now() - down.t < 500;
+    if (!thrustHeld && tap && !G.focus && aimed && aimed.type === 'door') goThrough(aimed.to);
+    else if (tap && !G.focus && aimed && aimed.type === 'valve' && !aimed.valve.locked && G.focusRequired()) G.enterFocus(aimed.valve);
     down = null; lastXY = null; });
 
   // ---------- moving between rooms: 0.3 s fade, view direction kept ----------

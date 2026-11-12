@@ -41,6 +41,10 @@ export async function start() {
   installMap(G);
   installPartner(G);
   installGuide(G);
+  { // side keys in one tidy column (pause / settings / stamp / help)
+    const col = document.createElement('div'); col.id = 'sideKeys';
+    if (document.body.appendChild && col.appendChild) { document.body.appendChild(col); for (const id of ['btnPause', 'btnSettings', 'btnStamp', 'btnHelp']) { const b = G.$(id); if (b && b.parentNode) col.appendChild(b); } }
+  }
   if (!G.publicWeb) installTestHooks(G); // the published web build has no test hooks
 
   // ---------- loop ----------
