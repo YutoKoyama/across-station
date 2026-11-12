@@ -2,8 +2,8 @@
 // 1 冷却：A/Bのバルブ（手がかりは相手側の部屋） → 2 通信：振動の暗号をダイヤルで入力 → 3 逆噴射：方位を向いて3秒 → 4 脱出
 // The order of gimmicks comes from the pack ("steps": [...]); phase n = steps[n - 1], then the ending.
 import * as THREE from '../vendor/three.module.js';
-import { FLOOR, CEIL, onWall } from './world.js?v=202611121553';
-import { seedRng, rand, shuffle, pick } from './rng.js?v=202611121553';
+import { FLOOR, CEIL, onWall } from './world.js?v=202611121556';
+import { seedRng, rand, shuffle, pick } from './rng.js?v=202611121556';
 
 export const SYMBOLS = ['○', '△', '□', '☆'];
 // vibration code: told apart by length and order only (spec 7). トン = short, ツー = long
@@ -29,7 +29,7 @@ export function installPuzzle(G) {
     for (let i = 0; i < 4; i++) { const a = Math.PI / 2 - i * Math.PI / 2;
       const s = label(symbols[i], 0.34, 0.34, '#2b3150', '#ffffff', 300); s.position.set(Math.cos(a) * 0.78, Math.sin(a) * 0.78, 0.02); holder.add(s); }
     const wheel = new THREE.Group(); wheel.position.z = 0.2; holder.add(wheel);
-    const wheelMat = new THREE.MeshLambertMaterial({ color: DS.wheel, emissive: DS.glow ? DS.glow.clone().multiplyScalar(kind === 'code' ? 0.55 : 0.75) : 0x000000 });
+    const wheelMat = new THREE.MeshLambertMaterial({ color: DS.wheel, emissive: DS.glow ? DS.glow.clone().multiplyScalar(kind === 'code' ? 0.6 : 0.85) : 0x000000 });
     wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.06, 8, 32), wheelMat));
     for (let i = 0; i < 2; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.07, 0.07), wheelMat); s.rotation.z = i * Math.PI / 2; wheel.add(s); }
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.16, 8), DS.hub); hub.rotation.x = Math.PI / 2; wheel.add(hub);

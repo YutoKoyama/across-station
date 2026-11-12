@@ -15,7 +15,7 @@
   },
   "renderer": {
     "toneMapping": "aces",
-    "exposure": 1.12,
+    "exposure": 1.32,
     "background": "#050912",
     "fog": {
       "color": "#0a1526",
@@ -23,20 +23,20 @@
       "far": 28
     },
     "bloom": {
-      "strength": 0.85,
+      "strength": 1.0,
       "radius": 0.5,
-      "threshold": 0.62
+      "threshold": 0.58
     }
   },
   "light": {
     "hemiSky": "#7fc6ff",
     "hemiGround": "#140e0a",
-    "hemiIntensity": 0.6,
+    "hemiIntensity": 0.8,
     "lampColor": "#ffc27a",
     "lampIntensity": 14,
     "lampDistance": 14,
     "lampDecay": 1.6,
-    "bakedNormal": "#b7cdf5"
+    "bakedNormal": "#c9daff"
   },
   "textures": {
     "wall": "tex/wall.jpg",
@@ -62,8 +62,8 @@
     "pipeGray": "#4a4f5c",
     "doorFrame": "#2f3a50",
     "lampStrip": "#9fd9ff",
-    "valveWheel": "#b5482e",
-    "codeWheel": "#5f9e8e",
+    "valveWheel": "#4a1606",
+    "codeWheel": "#0d3a34",
     "dialPlate": "#111827",
     "dialBack": "#1c2436",
     "lever": "#b5482e",
@@ -295,7 +295,7 @@
     "cyan": "#8ff6ff",
     "soft": "#2f8fb0",
     "amber": "#ffb04a",
-    "valve": "#ff6a1a",
+    "valve": "#ff5a10",
     "code": "#2fd6c0"
   }
 }
