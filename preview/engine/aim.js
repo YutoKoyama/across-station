@@ -1,6 +1,6 @@
 // ---------- aiming + dial turning (phone roll like a steering wheel) + the thrust ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121556';
+import { faceYaw } from './world.js?v=202611121605';
 
 export const HOLD_SEC = 1.5;
 const THRUST_SEC = 3, THRUST_YAW_TOL = 25, THRUST_PITCH_TOL = 35;
@@ -80,7 +80,7 @@ export function installAim(G) {
   function setAimVisual(item) { // DOM/material updates only when the aimed object changes
     if (item === shownAim) return;
     if (shownAim && glowMat(shownAim)) glowMat(shownAim).emissive.setHex(shownAim.valve ? shownAim.valve.baseEmissive || EMISSIVE.none : EMISSIVE.none);
-    if (item && glowMat(item)) glowMat(item).emissive.setHex(item.valve && item.valve.baseEmissive ? (item.valve.kind === 'code' ? 0x3ff0d8 : 0xff7424) : EMISSIVE[item.type]);
+    if (item && glowMat(item)) glowMat(item).emissive.setHex(item.valve && item.valve.baseEmissive ? (item.valve.kind === 'code' ? 0x1f8a7c : 0xa8461a) : EMISSIVE[item.type]);
     if (item && !G.codePlaying && performance.now() - lastAimSfx > AIM_SFX_GAP_MS) { lastAimSfx = performance.now(); G.sfx('aim', { vol: 0.25 }); }
     $('reticle').classList.toggle('aim', !!item);
     shownAim = item;

@@ -15,7 +15,7 @@
   },
   "renderer": {
     "toneMapping": "aces",
-    "exposure": 1.32,
+    "exposure": 1.18,
     "background": "#050912",
     "fog": {
       "color": "#0a1526",
@@ -23,9 +23,9 @@
       "far": 28
     },
     "bloom": {
-      "strength": 1.0,
-      "radius": 0.5,
-      "threshold": 0.58
+      "strength": 0.5,
+      "radius": 0.45,
+      "threshold": 0.74
     }
   },
   "light": {
@@ -61,7 +61,7 @@
     "pipeHot": "#8a3a26",
     "pipeGray": "#4a4f5c",
     "doorFrame": "#2f3a50",
-    "lampStrip": "#9fd9ff",
+    "lampStrip": "#5e8eae",
     "valveWheel": "#4a1606",
     "codeWheel": "#0d3a34",
     "dialPlate": "#111827",
@@ -292,10 +292,10 @@
   },
   "neon": {
     "_comment": "Canva look (2026-11-13): glowing lines picked up by the bloom",
-    "cyan": "#8ff6ff",
-    "soft": "#2f8fb0",
-    "amber": "#ffb04a",
-    "valve": "#ff5a10",
-    "code": "#2fd6c0"
+    "cyan": "#3ea7c2",
+    "soft": "#1d5f78",
+    "amber": "#b9772f",
+    "valve": "#e0500e",
+    "code": "#22a896"
   }
 }
