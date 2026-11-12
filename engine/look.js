@@ -9,7 +9,7 @@ import { mergeGeometries } from '../vendor/addons/utils/BufferGeometryUtils.js';
 
 export async function loadTheme(THREE, id) {
   const base = `themes/${id}/`;
-  const r = await fetch(base + 'theme.json?v=202611121444');
+  const r = await fetch(base + 'theme.json?v=202611121504');
   if (!r.ok) throw new Error('theme not found: ' + id);
   const theme = await r.json();
   const loader = new THREE.TextureLoader();
@@ -30,7 +30,7 @@ export async function loadTheme(THREE, id) {
     }));
   }
   // sound set (CC0 Kenney audio + synthesis) - engine/sound.js decodes the files once audio is unlocked by a tap
-  if (theme.sfx) { const S = await import('./sound.js?v=202611121444'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
+  if (theme.sfx) { const S = await import('./sound.js?v=202611121504'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
   if (theme.css && ![...document.querySelectorAll('link[rel=stylesheet]')].some(x => x.getAttribute('href') === base + theme.css)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + theme.css; document.head.appendChild(l); }
   return theme;
 }

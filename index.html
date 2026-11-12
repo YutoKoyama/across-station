@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>ACROSS</title>
 <!-- the theme's stylesheet is linked here (not only from look.js) so it is ready before the first paint -->
-<link rel="stylesheet" href="themes/tomoshibi/theme.css?v=202611121444">
+<link rel="stylesheet" href="themes/tomoshibi/theme.css?v=202611121504">
 <style>
   /* until the theme is ready (body.look-new), show only a quiet loading line - never the bare base styles */
   body:not(.look-new) { background:#0a0d16; }
@@ -83,11 +83,11 @@
 <body>
 <div id="top">
   <div id="topText"><div id="who">A・整備係</div><div id="goalLabel">いまやること</div><div id="goal"></div><div id="todo"></div></div>
-  <div id="map"></div>
   <button id="btnPlayer" aria-label="AとBを切り替え">A⇄B</button>
 </div>
 <button id="btnPause" class="roundBtn" aria-label="一時停止"></button>
 <button id="btnSettings" class="roundBtn" aria-label="設定"></button>
+<div id="map"></div>
 <div id="reticle"></div>
 <div id="turnHint" aria-hidden="true"><svg viewBox="0 0 120 120" width="120" height="120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M60 16 A44 44 0 0 1 104 60"/><path d="M104 60 l-9 -4 M104 60 l5 -8"/><path d="M60 104 A44 44 0 0 1 16 60"/><path d="M16 60 l9 4 M16 60 l-5 8"/></svg></div>
 <div id="thrustUI"><svg viewBox="0 0 180 100" width="180" height="100"><path d="M34 92 A56 56 0 0 1 146 92" fill="none" stroke="#3b4380" stroke-width="9" stroke-linecap="round"/>
@@ -153,7 +153,7 @@
 <script>window.__PUBLIC_WEB__ = true; // published web build: no test hooks</script>
 <script type="module">
 // The engine lives in www/engine/ (one file per role, see engine/main.js); the story, rooms and wording in www/packs/<id>/pack.json.
-import { start } from './engine/main.js?v=202611121444';
+import { start } from './engine/main.js?v=202611121504';
 window.__appStage = 'three loaded';
 await start();
 </script>

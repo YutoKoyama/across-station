@@ -4,14 +4,14 @@
 // Online, the partner's looking direction arrives as 'look' messages (a few per second).
 import * as THREE from '../vendor/three.module.js';
 
-const GAP = 0.22, WALL_H = 0.3, C30 = 0.866, S30 = 0.5;
+const GAP = 0.22, WALL_H = 0; // top-down (2026-11-13): seen straight from above
 const LOOK_SEND_MS = 120, LOOK_SEND_DEG = 3; // the partner figure turns with these (real time)
 
 export function installMap(G) {
   const { $, ROOMS, players, camera, fmt } = G;
   const M = G.UI.map || {};
   const NS = 'http://www.w3.org/2000/svg';
-  const iso = (x, z) => [(x - z) * C30, (x + z) * S30];
+  const iso = (x, z) => [x, z]; // (name kept: map coordinates = floor x (east) and z (south))
   const P = pts => pts.map(p => p.map(n => n.toFixed(3)).join(',')).join(' ');
   const roomX = R => R.col * (1 + GAP);
   const other = () => (G.cur === 'A' ? 'B' : 'A');
@@ -19,7 +19,7 @@ export function installMap(G) {
   // view box from the corners of all rooms (+ wall height)
   const xs = [], ys = [];
   for (const R of ROOMS) for (const [x, z] of [[0, 0], [1, 0], [1, 1], [0, 1]]) { const [X, Y] = iso(roomX(R) + x, z); xs.push(X); ys.push(Y, Y - WALL_H); }
-  const pad = 0.12, vb = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2];
+  const pad = 0.1, vb = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2];
 
   // yaw of a camera quaternion -> a direction on the map
   const eu = new THREE.Euler();
@@ -34,18 +34,16 @@ export function installMap(G) {
     const meHere = players[meKey()].room === R.id, otherHere = players[other()].room === R.id;
     const fill = meHere ? 'rgba(242,162,58,0.22)' : otherHere ? 'rgba(127,184,168,0.18)' : 'rgba(230,221,200,0.05)';
     let s = '';
-    // back walls: west (left) and north (= 前方, with the amber ★ band)
-    s += `<polygon points="${P([c[3], c[0], up(c[0]), up(c[3])])}" fill="rgba(230,221,200,0.07)" stroke="rgba(230,221,200,0.35)" stroke-width="0.012"/>`;
-    s += `<polygon points="${P([c[0], c[1], up(c[1]), up(c[0])])}" fill="rgba(230,221,200,0.10)" stroke="rgba(230,221,200,0.35)" stroke-width="0.012"/>`;
+    // front (= 前方, the ★ band wall): a thick amber line along the north edge
     const band = t => [c[0][0] + (c[1][0] - c[0][0]) * t, c[0][1] + (c[1][1] - c[0][1]) * t];
-    const b0 = band(0.08), b1 = band(0.92);
-    s += `<polygon points="${P([[b0[0], b0[1] - WALL_H * 0.42], [b1[0], b1[1] - WALL_H * 0.42], [b1[0], b1[1] - WALL_H * 0.62], [b0[0], b0[1] - WALL_H * 0.62]])}" fill="#F2A23A" opacity="0.85"/>`;
+    const b0 = band(0.06), b1 = band(0.94);
     // floor
     s += `<polygon points="${P(c)}" fill="${fill}" stroke="${meHere ? '#F2A23A' : 'rgba(230,221,200,0.45)'}" stroke-width="${meHere ? 0.03 : 0.015}"/>`;
+    s += `<line x1="${b0[0].toFixed(3)}" y1="${(b0[1] + 0.04).toFixed(3)}" x2="${b1[0].toFixed(3)}" y2="${(b1[1] + 0.04).toFixed(3)}" stroke="#F2A23A" stroke-width="0.07"/>`;
     // room name on the floor
-    const [cx, cy] = big ? iso(x0 + 0.5, 0.62) : iso(x0 + 0.78, 0.86);
-    const name = big ? R.name : R.name[0];
-    s += `<text x="${cx.toFixed(3)}" y="${cy.toFixed(3)}" font-size="${big ? 0.15 : 0.3}" text-anchor="middle" fill="${meHere ? '#F2A23A' : 'rgba(230,221,200,0.7)'}" font-weight="700" style="letter-spacing:0.02em">${name}</text>`;
+    const [cx, cy] = big ? iso(x0 + 0.5, 0.86) : iso(x0 + 0.5, 0.9);
+    const name = R.name;
+    s += `<text x="${cx.toFixed(3)}" y="${cy.toFixed(3)}" font-size="${big ? 0.15 : 0.2}" text-anchor="middle" fill="${meHere ? '#F2A23A' : 'rgba(230,221,200,0.7)'}" font-weight="700" style="letter-spacing:0.02em">${name}</text>`;
     return s;
   }
   function doorShapes(R) { // a short corridor to the room on the right
@@ -56,9 +54,9 @@ export function installMap(G) {
   function marker(k, big) {
     const p = players[k], R = ROOMS.find(r => r.id === p.room); if (!R) return '';
     const same = players.A.room === players.B.room;
-    const off = same ? (k === 'A' ? -0.17 : 0.17) : 0; // same side as the figure in the room: A left, B right
-    const [X, Y] = iso(roomX(R) + 0.5 + off, 0.42 + (same ? 0.08 : 0));
-    const mine = k === meKey(), col = mine ? '#F2A23A' : '#7FB8A8', r = big ? 0.085 : 0.15;
+    const off = same ? (k === 'A' ? -0.2 : 0.2) : 0; // same side as the figure in the room: A left, B right
+    const [X, Y] = iso(roomX(R) + 0.5 + off, 0.45);
+    const mine = k === meKey(), col = mine ? '#F2A23A' : '#7FB8A8', r = big ? 0.085 : 0.12;
     const yaw = mine ? G.myYaw() : p.yaw;
     let s = `<g id="mk${k}${big ? 'B' : ''}" transform="translate(${X.toFixed(3)},${Y.toFixed(3)})">`;
     if (yaw !== undefined && yaw !== null) s += `<polygon class="cone" points="${cone(yaw, big)}" fill="${col}" opacity="0.45"/>`;
@@ -68,7 +66,7 @@ export function installMap(G) {
     return s + '</g>';
   }
   function cone(yaw, big) { // a wedge pointing where that person is looking
-    const L = big ? 0.32 : 0.46, w = 0.42;
+    const L = big ? 0.34 : 0.36, w = 0.42;
     const a = isoDir(yaw - w), b = isoDir(yaw + w);
     return P([[0, 0], [a[0] * L, a[1] * L], [b[0] * L, b[1] * L]]);
   }

@@ -1,7 +1,7 @@
 // ---------- view: phone orientation -> camera, touch look, tapping doors, moving between rooms ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121444';
-import { sleep } from './feedback.js?v=202611121444';
+import { faceYaw } from './world.js?v=202611121504';
+import { sleep } from './feedback.js?v=202611121504';
 
 export function installView(G) {
   const { $, camera, renderer, ROOMS, roomById, players } = G;

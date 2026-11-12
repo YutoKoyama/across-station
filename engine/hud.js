@@ -109,7 +109,7 @@ export function installHud(G) {
   const unlockByTap = () => { G.askSensorPermission(); G.unlockAudio(); G.keepAwake(); G.lockPortrait(); };
   $('btnStart').onclick = () => { unlockByTap(); startGame(); };
   async function startGame() {
-    $('start').style.display = 'none';
+    $('start').style.display = 'none'; document.body.classList.add('playing');
     G.unlockAudio(); G.keepAwake();
     try { if (G.P.ScreenOrientation) await G.P.ScreenOrientation.lock({ orientation: 'portrait' }); } catch (err) {}
     G.recenterPending = true; G.haptic('tick');

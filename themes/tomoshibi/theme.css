@@ -210,3 +210,11 @@ body.look-new #dialLabel { font-size: 14px; font-weight: 700; color: var(--kinar
 body.look-new #dialNow { font-size: 12px; color: var(--dim); margin-top: 3px; }
 body.look-new #dialSym { color: var(--kohaku); font-weight: 700; font-size: 15px; }
 body.look-new #dialBack { flex: none; background: transparent; border: 1px solid var(--line); border-radius: 0; color: var(--kinari); padding: 10px 14px; font-size: 14px; clip-path: var(--chamfer-s); }
+
+/* --- 2026-11-13: the map leaves the top band (the next-action text gets the full width), side keys only while playing --- */
+body.look-new #map { position: fixed; left: 8px; top: calc(max(8px, env(safe-area-inset-top)) + var(--topH, 60px) + 6px); width: 168px; height: 66px;
+  background: var(--plate); border: 1px solid var(--line); clip-path: var(--chamfer-s); padding: 4px 6px 12px; box-sizing: border-box; display: block; }
+body.look-new #map::after { right: 8px; bottom: 1px; }
+body.look-new:not(.playing) #map, body.look-new:not(.playing) #sideKeys { display: none; }
+body.look-new #notice { top: calc(max(8px, env(safe-area-inset-top)) + var(--topH, 60px) + 80px) !important; }
+body.look-new #mapBigSvg { aspect-ratio: 3.1; }
