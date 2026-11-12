@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ACROSS</title>
+<!-- the theme's stylesheet is linked here (not only from look.js) so it is ready before the first paint -->
+<link rel="stylesheet" href="themes/tomoshibi/theme.css?v=202611121553">
+<style>
+  /* until the theme is ready (body.look-new), show only a quiet loading line - never the bare base styles */
+  body:not(.look-new) { background:#0a0d16; }
+  body:not(.look-new) > *:not(#err) { visibility:hidden !important; }
+  body:not(.look-new)::after { content:'読み込み中…'; position:fixed; left:0; right:0; top:50%; text-align:center;
+    color:rgba(230,221,200,.62); font-size:13px; letter-spacing:.3em; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#000; color:#e8ecff;
+    font-family:system-ui,sans-serif; touch-action:none; -webkit-user-select:none; user-select:none; }
+  canvas { display:block; }
+  #reticle { position:fixed; left:50%; top:50%; width:22px; height:22px; margin:-13px 0 0 -13px;
+    border:2px solid rgba(255,255,255,.85); border-radius:50%; pointer-events:none; }
+  #turnHint { position:fixed; left:50%; top:50%; width:120px; height:120px; margin:-60px 0 0 -60px; pointer-events:none; display:none; color:#ffd23f; }
+  #turnHint.show { display:block; animation: turnRock 1.4s ease-in-out infinite; }
+  @keyframes turnRock { 0%,100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+  #reticle.aim { border-color:#ffd23f; box-shadow:0 0 8px #ffd23f; }
+  #hint { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(max(12px, env(safe-area-inset-bottom)) + 8px);
+    max-width:92%; text-align:center; font-size:13px; color:#cfd6ff; background:#141a33e6; border-radius:16px; padding:7px 16px;
+    pointer-events:none; white-space:pre-line; }
+  #hint:empty { display:none; }
+  #hint.read { color:#5dff9d; background:#04140ce6; border:1px solid #5dff9d; border-radius:12px; font-size:15px;
+    bottom:calc(max(12px, env(safe-area-inset-bottom)) + 104px); } /* copy of a panel's text, kept low so it does not cover the panel */
+  #top { position:fixed; left:8px; right:8px; top:max(8px, env(safe-area-inset-top)); display:flex; align-items:center; gap:8px;
+    background:#070914d9; border-radius:16px; padding:8px 10px; }
+  #topText { flex:1; min-width:0; }
+  #who { font-size:11px; color:#9aa3d0; }
+  #goal { font-size:13px; color:#e8ecff; line-height:1.35; }
+  #map { display:flex; gap:4px; }
+  #map div { width:22px; height:18px; border:1px solid #6b7cff; border-radius:4px; font-size:9px; color:#9aa3d0; display:flex;
+    align-items:center; justify-content:center; position:relative; }
+  #map div.me { background:#2563eb; color:#fff; border-color:#2563eb; }
+  #map div .p { position:absolute; top:-4px; right:-4px; width:8px; height:8px; border-radius:4px; background:#f5c542; }
+  #btnPlayer { border:1px solid #3b4380; background:#1f2550; color:#e8ecff; border-radius:10px; font-size:12px; padding:6px 8px; }
+  .roundBtn { position:fixed; right:10px; width:40px; height:40px; border-radius:20px; border:1px solid #3b4380; background:#1f2550cc;
+    color:#e8ecff; font-size:16px; }
+  #btnPause { top:calc(max(8px, env(safe-area-inset-top)) + 64px); }
+  #btnSettings { top:calc(max(8px, env(safe-area-inset-top)) + 110px); }
+  #partner { position:fixed; left:16px; right:16px; bottom:calc(max(12px, env(safe-area-inset-bottom)) + 52px); display:flex; align-items:center;
+    gap:8px; background:#0f1a33e6; border:1px solid #5dff9d; border-radius:20px; padding:6px 12px 6px 6px; pointer-events:none; }
+  #partner .av { width:24px; height:24px; border-radius:12px; background:#2a1e44; color:#e8ecff; font-size:12px; display:flex;
+    align-items:center; justify-content:center; flex:none; }
+  #partnerText { font-size:12.5px; color:#5dff9d; }
+  #thrustUI { position:fixed; left:50%; top:50%; transform:translate(-50%, 10px); width:180px; text-align:center; pointer-events:none; display:none; }
+  #thrustNum { font-size:44px; color:#fff; line-height:1; margin-top:-70px; }
+  #thrustLabel { font-size:12px; color:#f5c542; margin-top:4px; }
+  #pause { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    background:#05060ff2; font-size:18px; }
+  #pause button { font-size:18px; padding:14px 28px; border-radius:14px; border:0; background:#2563eb; color:#fff; }
+  #btnStamp { top:calc(max(8px, env(safe-area-inset-top)) + 156px); }
+  #stampMenu { position:fixed; right:58px; top:calc(max(8px, env(safe-area-inset-top)) + 156px); display:none; flex-direction:column; gap:6px; }
+  #stampMenu button { background:#1f2550f2; color:#e8ecff; border:1px solid #3b4380; border-radius:16px; padding:8px 12px; font-size:13px; text-align:left; }
+  #flash { position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; transition:opacity .05s; }
+  #onlineBox { display:flex; flex-direction:column; gap:8px; align-items:center; border:1px solid #3b4380; border-radius:14px; padding:10px 14px; }
+  #onlineBox .row { display:flex; gap:8px; }
+  #onlineBox button { font-size:15px; padding:10px 14px; border-radius:10px; border:1px solid #3b4380; background:#1f2550; color:#e8ecff; }
+  #onlineBox input { width:130px; font-size:16px; padding:8px; border-radius:10px; border:1px solid #3b4380; background:#0b0e1c; color:#e8ecff; text-align:center; }
+  #onlineMsg { font-size:13px; color:#ffd23f; min-height:18px; }
+  #settings, #pause { z-index:20; } /* full screens stay above story notices */
+  #settings { position:fixed; inset:0; display:none; flex-direction:column; justify-content:center; gap:10px; padding:24px;
+    background:#05060ff2; font-size:14px; }
+  #settings button { background:#1f2550; color:#e8ecff; border:1px solid #3b4380; border-radius:10px; padding:12px; font-size:14px; }
+  #settings button.on { background:#2563eb; }
+  #settings .row { display:flex; align-items:center; gap:8px; }
+  #settings .row input { flex:1; }
+  #settings .debug { font-size:12px; color:#9aa3d0; white-space:pre-line; }
+  #fade { position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; transition:opacity .15s linear; }
+  #start, #done { position:fixed; inset:0; background:#05060fee; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; padding:24px; gap:12px; }
+  #done { display:none; }
+  #start h1 { font-size:20px; margin:0; }
+  #start p, #done p { margin:0; font-size:14px; opacity:.9; line-height:1.6; }
+  #start button, #done button { font-size:18px; padding:14px 28px; border-radius:14px; border:0; background:#2563eb; color:#fff; }
+  #start a { color:#8ab4ff; font-size:12px; }
+</style>
+</head>
+<body>
+<div id="top">
+  <div id="topText"><div id="who">A・整備係</div><div id="goalLabel">いまやること</div><div id="goal"></div><div id="todo"></div></div>
+  <button id="btnPlayer" aria-label="AとBを切り替え">A⇄B</button>
+</div>
+<button id="btnPause" class="roundBtn" aria-label="一時停止"></button>
+<button id="btnSettings" class="roundBtn" aria-label="設定"></button>
+<div id="map"></div>
+<div id="reticle"></div>
+<div id="turnHint" aria-hidden="true"><svg viewBox="0 0 120 120" width="120" height="120" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M60 16 A44 44 0 0 1 104 60"/><path d="M104 60 l-9 -4 M104 60 l5 -8"/><path d="M60 104 A44 44 0 0 1 16 60"/><path d="M16 60 l9 4 M16 60 l-5 8"/></svg></div>
+<div id="thrustUI"><svg viewBox="0 0 180 100" width="180" height="100"><path d="M34 92 A56 56 0 0 1 146 92" fill="none" stroke="#3b4380" stroke-width="9" stroke-linecap="round"/>
+  <path id="thrustArc" d="M34 92 A56 56 0 0 1 146 92" fill="none" stroke="#f5c542" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/></svg>
+  <div id="thrustNum">3</div><div id="thrustLabel">噴射の方位を向く</div></div>
+<button id="btnStamp" class="roundBtn" aria-label="スタンプを送る" style="display:none"></button>
+<div id="stampMenu"></div>
+<div id="flash"></div>
+<div id="partner"><span class="av" id="partnerAv">B</span><span id="partnerText"></span></div>
+<div id="hint"></div>
+<div id="dialUI"><svg id="dialPhone" viewBox="0 0 40 64" width="40" height="64" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="2" width="32" height="60" rx="5"/><path d="M15 8h10"/><circle cx="20" cy="55" r="2.2"/></svg>
+  <div id="dialText"><div id="dialLabel">スマホをハンドルのように回す</div><div id="dialNow">いま「<span id="dialSym"></span>」　1.5秒止めると確定</div></div>
+  <button id="dialBack">戻る</button></div>
+<div id="settings">
+  <div style="font-size:18px;text-align:center">設定</div>
+  <button id="btnRecenter">正面に戻す</button>
+  <button id="btnTouch">指で見回す：オフ</button>
+  <button id="btnStars" class="on">星の流れ：オン</button>
+  <div class="row">視野角 <input id="fov" type="range" min="55" max="100" value="75"><span id="fovVal">75°</span></div>
+  <div class="debug"><span id="fps">-- fps</span>　<span id="res"></span>　<span id="info"></span></div>
+  <button id="btnSettingsClose" style="background:#2563eb">閉じる</button>
+</div>
+<div id="fade"></div>
+<div id="notice" style="display:none;position:fixed;left:12px;right:60px;top:calc(max(8px, env(safe-area-inset-top)) + 72px);
+  background:#1f2550ee;border:1px solid #6b7cff;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.5">
+  <span id="noticeText"></span><button id="noticeClose" style="float:right;margin-left:8px;background:#2563eb;color:#fff;border:0;border-radius:8px;padding:4px 10px">閉じる</button></div>
+<div id="pause"><div>一時停止中</div><p style="font-size:14px;opacity:.85;margin:0">スマホを置いて休んで大丈夫です</p><button id="btnResume">再開する</button></div>
+<div id="done"><div id="doneTitle" style="font-size:20px"></div>
+  <p id="doneText"></p>
+  <button id="btnAgain">新しい問題でもう一度</button></div>
+<div id="start">
+  <h1 id="startTitle"></h1>
+  <p id="startStory" style="text-align:left"></p>
+  <p id="startHowto" style="font-size:13px"></p>
+  <div id="onlineBox"><div id="onlineIntro" style="font-size:13px;opacity:.85"></div>
+    <div class="row"><button id="btnHost">部屋を作る（A）</button></div>
+    <div class="row"><input id="joinCode" inputmode="numeric" maxlength="4" placeholder="ルームコード4桁"><button id="btnJoin">参加（B）</button></div>
+    <div id="onlineMsg"></div></div>
+  <button id="btnStart">はじめる</button>
+  <a href="sensor-test.html">（センサーテスト画面へ）</a>
+</div>
+<div id="err" style="display:none;position:fixed;left:8px;right:8px;top:40%;z-index:99;background:#4c1d1d;color:#fff;
+  border:2px solid #f87171;border-radius:12px;padding:12px;font-size:13px;white-space:pre-wrap;word-break:break-all"></div>
+<script>
+// Classic (non-module) script: shows errors on screen so problems are visible on the phone.
+(function () {
+  var box = document.getElementById('err');
+  window.showError = function (msg) { box.style.display = 'block'; box.textContent = '⚠ エラー\n' + msg + '\n\n（この画面をスクリーンショットして送ってください）'; };
+  window.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t !== window && (t.src || t.href)) showError('ファイルを読み込めません: ' + (t.src || t.href));
+    else showError((e.message || 'エラー') + (e.filename ? '\n' + e.filename + ':' + e.lineno : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) { showError('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+  setTimeout(function () {
+    if (!window.__appReady) showError('3D部分の読み込みが終わりませんでした（段階: ' + (window.__appStage || 'モジュール未読み込み') + '）');
+  }, 25000); // phone networks: textures, models and sounds can take a while
+  document.getElementById('btnStart').addEventListener('click', function () {
+    if (!window.__appReady) showError('まだ準備ができていません（段階: ' + (window.__appStage || 'モジュール未読み込み') + '）');
+  });
+})();
+</script>
+<script>window.__PUBLIC_WEB__ = true; // published web build: no test hooks</script>
+<script type="module">
+// The engine lives in www/engine/ (one file per role, see engine/main.js); the story, rooms and wording in www/packs/<id>/pack.json.
+import { start } from './engine/main.js?v=202611121553';
+window.__appStage = 'three loaded';
+await start();
+</script>
+</body>
+</html>
