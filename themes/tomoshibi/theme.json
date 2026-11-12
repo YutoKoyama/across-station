@@ -14,24 +14,29 @@
     "seiji": "#7FB8A8"
   },
   "renderer": {
-    "toneMapping": "neutral",
-    "exposure": 1.0,
-    "background": "#0a0d16",
+    "toneMapping": "aces",
+    "exposure": 1.32,
+    "background": "#050912",
     "fog": {
-      "color": "#121829",
-      "near": 5,
-      "far": 26
+      "color": "#0a1526",
+      "near": 6,
+      "far": 28
+    },
+    "bloom": {
+      "strength": 1.0,
+      "radius": 0.5,
+      "threshold": 0.58
     }
   },
   "light": {
-    "hemiSky": "#8fa3d6",
-    "hemiGround": "#1a1410",
-    "hemiIntensity": 0.55,
+    "hemiSky": "#7fc6ff",
+    "hemiGround": "#140e0a",
+    "hemiIntensity": 0.8,
     "lampColor": "#ffc27a",
     "lampIntensity": 14,
     "lampDistance": 14,
     "lampDecay": 1.6,
-    "bakedNormal": "#ffffff"
+    "bakedNormal": "#c9daff"
   },
   "textures": {
     "wall": "tex/wall.jpg",
@@ -49,18 +54,18 @@
     "core": "tex/core.jpg",
     "hazard": "tex/hazard.jpg"
   },
-  "roomTintStrength": 0.28,
+  "roomTintStrength": 0.18,
   "materials": {
-    "structure": "#4a5163",
+    "structure": "#3e4a60",
     "pipeCold": "#3b5a7a",
     "pipeHot": "#8a3a26",
     "pipeGray": "#4a4f5c",
-    "doorFrame": "#3a4152",
-    "lampStrip": "#ffd9a0",
-    "valveWheel": "#b5482e",
-    "codeWheel": "#5f9e8e",
-    "dialPlate": "#1b2236",
-    "dialBack": "#2c3346",
+    "doorFrame": "#2f3a50",
+    "lampStrip": "#9fd9ff",
+    "valveWheel": "#4a1606",
+    "codeWheel": "#0d3a34",
+    "dialPlate": "#111827",
+    "dialBack": "#1c2436",
     "lever": "#b5482e",
     "starBand": "#c9922f",
     "propMetal": "#6a7384",
@@ -128,6 +133,42 @@
       "lamp": "#ff9446",
       "lampIntensity": 16,
       "fog": "#1d1410",
+      "ambience": "reactor"
+    },
+    "airlock": {
+      "lamp": "#ffd0c8",
+      "lampIntensity": 12,
+      "fog": "#1a1012",
+      "ambience": "hangar"
+    },
+    "comms": {
+      "lamp": "#a8ffd6",
+      "lampIntensity": 12,
+      "fog": "#0d1a16",
+      "ambience": "command"
+    },
+    "greenhouse": {
+      "lamp": "#d8ffb0",
+      "lampIntensity": 15,
+      "fog": "#0f1a0c",
+      "ambience": "command"
+    },
+    "storage": {
+      "lamp": "#ffb36a",
+      "lampIntensity": 11,
+      "fog": "#1a120a",
+      "ambience": "hangar"
+    },
+    "quarters": {
+      "lamp": "#ffd59a",
+      "lampIntensity": 13,
+      "fog": "#1a140c",
+      "ambience": "command"
+    },
+    "medbay": {
+      "lamp": "#d6ecff",
+      "lampIntensity": 14,
+      "fog": "#0c1420",
       "ambience": "reactor"
     }
   },
@@ -248,5 +289,13 @@
     "notch": [
       28
     ]
+  },
+  "neon": {
+    "_comment": "Canva look (2026-11-13): glowing lines picked up by the bloom",
+    "cyan": "#8ff6ff",
+    "soft": "#2f8fb0",
+    "amber": "#ffb04a",
+    "valve": "#ff5a10",
+    "code": "#2fd6c0"
   }
 }

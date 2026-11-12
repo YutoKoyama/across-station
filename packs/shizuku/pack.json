@@ -33,7 +33,8 @@
         "hazardBands",
         "warnBeacon"
       ],
-      "mood": "hangar"
+      "mood": "hangar",
+      "row": 1
     },
     {
       "id": "command",
@@ -49,7 +50,8 @@
         "starChart",
         "tapeNote"
       ],
-      "mood": "command"
+      "mood": "command",
+      "row": 1
     },
     {
       "id": "power",
@@ -64,7 +66,79 @@
         "generator",
         "coolantTank"
       ],
-      "mood": "reactor"
+      "mood": "reactor",
+      "row": 1
+    },
+    {
+      "id": "airlock",
+      "name": "エアロック",
+      "col": 0,
+      "row": 0,
+      "color": "#5a2a2e",
+      "lever": false,
+      "code": "A-04",
+      "dressing": [
+        "hazardBands",
+        "warnBeacon"
+      ],
+      "mood": "airlock"
+    },
+    {
+      "id": "comms",
+      "name": "通信室",
+      "col": 1,
+      "row": 0,
+      "color": "#1d4a3c",
+      "lever": false,
+      "code": "R-05",
+      "dressing": [],
+      "mood": "comms"
+    },
+    {
+      "id": "greenhouse",
+      "name": "温室",
+      "col": 2,
+      "row": 0,
+      "color": "#2c5a26",
+      "lever": false,
+      "code": "G-06",
+      "dressing": [],
+      "mood": "greenhouse"
+    },
+    {
+      "id": "storage",
+      "name": "倉庫",
+      "col": 0,
+      "row": 2,
+      "color": "#4a3420",
+      "lever": false,
+      "code": "S-07",
+      "dressing": [
+        "cargoBarrels"
+      ],
+      "mood": "storage"
+    },
+    {
+      "id": "quarters",
+      "name": "居住区",
+      "col": 1,
+      "row": 2,
+      "color": "#5a4628",
+      "lever": false,
+      "code": "Q-08",
+      "dressing": [],
+      "mood": "quarters"
+    },
+    {
+      "id": "medbay",
+      "name": "医務室",
+      "col": 2,
+      "row": 2,
+      "color": "#29405e",
+      "lever": false,
+      "code": "M-09",
+      "dressing": [],
+      "mood": "medbay"
     }
   ],
   "roles": {
@@ -319,5 +393,58 @@
         "do": "ending"
       }
     ]
-  }
+  },
+  "links": [
+    [
+      "hangar",
+      "command"
+    ],
+    [
+      "command",
+      "power"
+    ],
+    [
+      "hangar",
+      "airlock",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "airlock",
+      "comms",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "comms",
+      "greenhouse",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "power",
+      "medbay",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "medbay",
+      "quarters",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "quarters",
+      "storage",
+      {
+        "openAt": "plants"
+      }
+    ]
+  ],
+  "_links": "3x3 station: [roomA, roomB, {openAt: step}] = a door between neighbours; openAt keeps it shut until that step. Middle row = the prologue corridor; A wing (north) and B wing (south) open after the first thrust."
 }

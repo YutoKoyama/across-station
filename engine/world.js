@@ -25,7 +25,7 @@ export function installWorld(G, Renderer, createLook) {
   scene.background = new THREE.Color(0x02030a);
   const camera = new THREE.PerspectiveCamera(75, G.viewW() / G.viewH(), 0.05, 200);
   camera.position.set(0, 0, 0); // eye position is fixed: look-around only
-  addEventListener('resize', () => { camera.aspect = G.viewW() / G.viewH(); camera.updateProjectionMatrix(); renderer.setSize(G.viewW(), G.viewH()); });
+  addEventListener('resize', () => { camera.aspect = G.viewW() / G.viewH(); camera.updateProjectionMatrix(); renderer.setSize(G.viewW(), G.viewH()); if (G.LOOK && G.LOOK.resize) G.LOOK.resize(G.viewW(), G.viewH(), renderer.getPixelRatio()); });
   const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x202030, 1.15); scene.add(hemi);
   G.hemiBase = hemi.color.clone();
   Object.assign(G, { renderer, scene, camera, hemi });
@@ -76,15 +76,27 @@ export function installWorld(G, Renderer, createLook) {
     const LOOK = G.LOOK;
     const g = new THREE.Group(); g.visible = false; scene.add(g); R.group = g;
     R.doors = {}; // wall -> target room id
-    const left = ROOMS.find(x => x.col === R.col - 1), right = ROOMS.find(x => x.col === R.col + 1);
-    if (left) R.doors[3] = left.id; if (right) R.doors[1] = right.id;
+    R.doorOpenAt = {}; // wall -> step name: the door stays shut until that step is reached
+    const LINKS = G.STAGE.links;
+    if (LINKS) { // 3x3 station (2026-11-13): doors come from the pack's links; wall from the grid offset
+      for (const [a, b, opt] of LINKS) {
+        if (a !== R.id && b !== R.id) continue;
+        const O = roomById[a === R.id ? b : a], dc = O.col - R.col, dr = (O.row || 0) - (R.row || 0);
+        const k = dc === 1 ? 1 : dc === -1 ? 3 : dr === -1 ? 0 : 2;
+        R.doors[k] = O.id; if (opt && opt.openAt) R.doorOpenAt[k] = opt.openAt;
+      }
+    } else {
+      const left = ROOMS.find(x => x.col === R.col - 1), right = ROOMS.find(x => x.col === R.col + 1);
+      if (left) R.doors[3] = left.id; if (right) R.doors[1] = right.id;
+    }
     LOOK.buildShell(R, g);
     for (const [k, to] of Object.entries(R.doors)) { // doors
       const dg = onWall(+k, 0.03); dg.position.y = FLOOR; g.add(dg);
-      const d = LOOK.buildDoor(dg, to, roomById[to].name); interactive.push({ mesh: d.panel, room: R.id, type: 'door', to, mat: d.mat });
+      const d = LOOK.buildDoor(dg, to, roomById[to].name); interactive.push({ mesh: d.panel, room: R.id, type: 'door', to, mat: d.mat, openAt: R.doorOpenAt[k] || null });
     }
   }
+  G.doorOpen = it => !it.openAt || !!(G.puzzle && G.reached(it.openAt));
   G.LOOK = createLook(THREE, G.THEME, { HW, FLOOR, CEIL, MIDY, RH, WALL, onWall, label, pipe, starGeo });
-  G.LOOK.renderer(renderer, scene, hemi); G.hemiBase = hemi.color.clone();
+  G.LOOK.renderer(renderer, scene, hemi, camera); G.hemiBase = hemi.color.clone();
   ROOMS.forEach(buildRoom);
 }

@@ -222,3 +222,39 @@ body.look-new #map { width: 216px; height: 82px; }
 /* 2026-11-13: the next action is always shown in full (no 2-line clamp, no tap needed) */
 body.look-new #todo { display: block; -webkit-line-clamp: unset; overflow: visible; }
 body.look-new #topText { cursor: default; }
+/* 3x3 station map (2026-11-13) */
+body.look-new #map { width: 140px; height: 146px; padding: 5px 5px 14px; }
+body.look-new #mapBigSvg { aspect-ratio: 1; max-height: 58vh; }
+body.look-new #notice { top: calc(max(8px, env(safe-area-inset-top)) + var(--topH, 60px) + 158px) !important; }
+
+/* ===== Canva look (2026-11-13): frosted glass panels with a thin cyan light edge, soft rounded corners ===== */
+body.look-new {
+  --plate: rgba(8, 16, 30, 0.58); --line: rgba(120, 220, 255, 0.34); --cyan: #8ff6ff;
+  --glass-shadow: 0 0 16px rgba(70, 190, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+body.look-new #top, body.look-new #map, body.look-new .roundBtn, body.look-new #notice, body.look-new #hint, body.look-new #dialUI,
+body.look-new #guideCard, body.look-new #stampMenu button, body.look-new #mapBig, body.look-new #onlineBox, body.look-new #start button,
+body.look-new #done button, body.look-new #pause button, body.look-new #settings button, body.look-new #dialBack, body.look-new #mapBigClose {
+  clip-path: none !important; border-radius: 10px !important;
+}
+body.look-new #top, body.look-new #map, body.look-new .roundBtn, body.look-new #notice, body.look-new #hint, body.look-new #dialUI, body.look-new #guideCard, body.look-new #stampMenu button {
+  background: var(--plate) !important; border: 1px solid var(--line) !important; box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2);
+}
+body.look-new #top { box-shadow: inset 3px 0 0 var(--kohaku), var(--glass-shadow) !important; }
+body.look-new #notice { border-left: 3px solid var(--kohaku) !important; }
+body.look-new #dialUI, body.look-new #guideCard { border-left: 3px solid var(--kohaku) !important; }
+/* no chamfer any more: hide the drawn diagonal of the old cut corner */
+body.look-new #onlineBox::after, body.look-new #onlineBox button::after, body.look-new #settings button::after, body.look-new #stampMenu button::after,
+body.look-new #hint::after, body.look-new #partner::after, body.look-new #notice::after, body.look-new #top::after, body.look-new .roundBtn::after { display: none !important; }
+body.look-new .roundBtn { color: var(--cyan); width: 44px; height: 44px; }
+body.look-new .roundBtn svg { filter: drop-shadow(0 0 4px rgba(143, 246, 255, 0.6)); }
+body.look-new #who { color: var(--cyan); opacity: 0.9; }
+body.look-new #map::after { color: rgba(143, 246, 255, 0.7); }
+body.look-new #reticle::before { filter: drop-shadow(0 0 3px rgba(242, 162, 58, 0.6)); }
+body.look-new #hint { color: #eaf6ff; }
+body.look-new #hint.read { background: rgba(6, 22, 28, 0.7) !important; border-color: rgba(127, 240, 220, 0.5) !important; }
+body.look-new #btnStart, body.look-new #btnAgain, body.look-new #btnResume, body.look-new #mapBigClose, body.look-new #guideNext {
+  box-shadow: 0 0 18px rgba(242, 162, 58, 0.45);
+}
+body.look-new #vignette { background: radial-gradient(ellipse 90% 75% at 50% 48%, transparent 55%, rgba(2, 6, 14, 0.6) 100%); }

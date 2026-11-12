@@ -5,9 +5,9 @@
 // (rooms side by side, 1 m apart), seen through the walls, a little fainter. Online, 'look' messages bring their direction;
 // the figure turns smoothly toward it. On one phone (A⇄B switch) the other crew member keeps their last direction.
 import * as THREE from '../vendor/three.module.js';
-import { HW, FLOOR } from './world.js?v=202611121517';
+import { HW, FLOOR } from './world.js?v=202611121556';
 
-const COL = 0x7fb8a8, ROOM_PITCH = HW * 2 + 1, SIDE = 1.4, TURN_RATE = 10, MOVE_RATE = 6;
+const COL = 0xffa448, /* orange hologram (Canva look, 2026-11-13) */ ROOM_PITCH = HW * 2 + 1, SIDE = 1.4, TURN_RATE = 10, MOVE_RATE = 6;
 
 export function installPartner(G) {
   const { scene, players, roomById } = G;
@@ -45,8 +45,8 @@ export function installPartner(G) {
   const target = new THREE.Vector3(); let yawNow = 0, pitchNow = 0, placed = false;
   function where(out) { // the partner's spot, in the coordinates of the room I am in (my eye = origin)
     const me = players[G.cur], o = other(), p = players[o];
-    const dc = roomById[p.room].col - roomById[me.room].col;
-    return out.set(dc * ROOM_PITCH + (dc === 0 ? (o === 'A' ? -SIDE : SIDE) : 0), 0, 0);
+    const dc = roomById[p.room].col - roomById[me.room].col, dr = (roomById[p.room].row || 0) - (roomById[me.room].row || 0);
+    return out.set(dc * ROOM_PITCH + (dc === 0 && dr === 0 ? (o === 'A' ? -SIDE : SIDE) : 0), 0, dr * ROOM_PITCH);
   }
   function tickPartner(dt) {
     const o = other(), p = players[o];
@@ -60,7 +60,7 @@ export function installPartner(G) {
     yawNow += dy * Math.min(1, dt * TURN_RATE); pitchNow += (pitch - pitchNow) * Math.min(1, dt * TURN_RATE);
     fig.rotation.y = yawNow; headG.rotation.x = pitchNow;
     // through a wall (another room) the figure is fainter
-    const far = roomById[p.room].col !== roomById[players[G.cur].room].col;
+    const far = p.room !== players[G.cur].room;
     if (G.partnerTag) { const k = Math.max(1, fig.position.length() / 4); G.partnerTag.scale.set(0.75 * k, 0.28 * k, 1); G.partnerTag.position.y = 0.3 + 0.12 * k; } // readable from the next room too
     body.opacity = far ? 0.32 : 0.5; head.opacity = far ? 0.4 : 0.6; coneMat.opacity = far ? 0.14 : 0.22;
   }

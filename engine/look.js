@@ -9,7 +9,7 @@ import { mergeGeometries } from '../vendor/addons/utils/BufferGeometryUtils.js';
 
 export async function loadTheme(THREE, id) {
   const base = `themes/${id}/`;
-  const r = await fetch(base + 'theme.json?v=202611121517');
+  const r = await fetch(base + 'theme.json?v=202611121556');
   if (!r.ok) throw new Error('theme not found: ' + id);
   const theme = await r.json();
   const loader = new THREE.TextureLoader();
@@ -30,7 +30,7 @@ export async function loadTheme(THREE, id) {
     }));
   }
   // sound set (CC0 Kenney audio + synthesis) - engine/sound.js decodes the files once audio is unlocked by a tap
-  if (theme.sfx) { const S = await import('./sound.js?v=202611121517'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
+  if (theme.sfx) { const S = await import('./sound.js?v=202611121556'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
   if (theme.css && ![...document.querySelectorAll('link[rel=stylesheet]')].some(x => (x.getAttribute('href') || '').split('?')[0] === base + theme.css)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + theme.css; document.head.appendChild(l); }
   return theme;
 }
@@ -49,6 +49,9 @@ export function createLook(THREE, theme, E) {
     pipeCold: metal(C.pipeCold, 'pipe'), pipeHot: metal(C.pipeHot, 'pipe'), pipeGray: metal(C.pipeGray, 'pipe'),
     propMetal: metal(C.propMetal || C.structure), propDark: metal(C.propDark || C.doorFrame), propAccent: metal(C.propAccent || C.lever, 'pipe'), propBlack: lambert(PAL.tekkon),
     lamp: new THREE.MeshBasicMaterial({ color: col(C.lampStrip) }),
+    neonCyan: new THREE.MeshBasicMaterial({ color: col((theme.neon && theme.neon.cyan) || '#7ff3ff'), fog: false }),
+    neonSoft: new THREE.MeshBasicMaterial({ color: col((theme.neon && theme.neon.soft) || '#2e7f9c') }),
+    neonAmber: new THREE.MeshBasicMaterial({ color: col((theme.neon && theme.neon.amber) || '#ffab4a'), fog: false }),
     band: new THREE.MeshBasicMaterial({ color: col(C.starBand) }),
     lever: lambert(C.lever),
   };
@@ -56,7 +59,7 @@ export function createLook(THREE, theme, E) {
   function bakedMat(map, tint) {
     const m = new THREE.MeshBasicMaterial({ map, color: tint.clone() }); baked.push({ mat: m, base: tint.clone() }); return m;
   }
-  const roomTint = R => new THREE.Color(1, 1, 1).lerp(col(R.color || '#ffffff').multiplyScalar(2.2), theme.roomTintStrength ?? 0.25);
+  const roomTint = R => new THREE.Color(1, 1, 1).lerp(col(R.color || '#ffffff').multiplyScalar(2.2), theme.roomTintStrength ?? 0.25).multiply(col(L.bakedNormal || '#ffffff')); // bakedNormal: overall grade of the baked walls
   const halos = []; // { sprite, base, pulse }
   function halo(parent, pos, size, color, opacity, pulse = 0) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: theme.tex.halo, color: col(color), transparent: true, opacity,
@@ -87,8 +90,29 @@ export function createLook(THREE, theme, E) {
   const lights = [];
   const tintNow = new THREE.Color(1, 1, 1);
 
-  function renderer(renderer, scene, hemi) {
+  // ---- post effects (2026-11-13, "Canva look"): light bleed (bloom) on the neon parts ----
+  // Only on a real WebGL renderer (the PC simulation tests use a fake one). If the phone is too slow even at the lowest
+  // resolution, main.js turns it off (setBloom(false)); the settings screen can turn it off too.
+  let composer = null, bloomPass = null, bloomOn = true, rRef = null, sRef = null, cRef = null;
+  async function setupBloom(B) {
+    try {
+      const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all([
+        import('../vendor/addons/postprocessing/EffectComposer.js'), import('../vendor/addons/postprocessing/RenderPass.js'),
+        import('../vendor/addons/postprocessing/UnrealBloomPass.js'), import('../vendor/addons/postprocessing/OutputPass.js')]);
+      const w = rRef.domElement.width / rRef.getPixelRatio(), h = rRef.domElement.height / rRef.getPixelRatio();
+      const c = new EffectComposer(rRef); c.addPass(new RenderPass(sRef, cRef));
+      bloomPass = new UnrealBloomPass(new THREE.Vector2(w / 2, h / 2), B.strength ?? 0.9, B.radius ?? 0.55, B.threshold ?? 0.72);
+      c.addPass(bloomPass); c.addPass(new OutputPass());
+      c.setPixelRatio(rRef.getPixelRatio()); c.setSize(w, h); composer = c;
+    } catch (e) { console.warn('bloom off', e); composer = null; }
+  }
+  function render() { if (composer && bloomOn) composer.render(); else rRef.render(sRef, cRef); }
+  function resize(w, h, pr) { if (!composer) return; composer.setPixelRatio(pr); composer.setSize(w, h); if (bloomPass) bloomPass.resolution.set(w / 2, h / 2); }
+  function setBloom(on) { bloomOn = !!on; }
+  function renderer(renderer, scene, hemi, camera) {
     const R = theme.renderer || {};
+    rRef = renderer; sRef = scene; cRef = camera;
+    if (R.bloom && camera && renderer.isWebGLRenderer && !globalThis.__SIM__) setupBloom(R.bloom);
     renderer.toneMapping = R.toneMapping === 'aces' ? THREE.ACESFilmicToneMapping : THREE.NeutralToneMapping;
     renderer.toneMappingExposure = R.exposure ?? 1;
     scene.background = col(R.background || '#0a0d16');
@@ -131,12 +155,13 @@ export function createLook(THREE, theme, E) {
     const plate = E.label(R.name + (R.code ? '\n' + R.code : ''), 1.7, 0.62);
     const pg = onWall(2, 0.03); pg.position.y = 2.7; plate.position.x = -2.8; pg.add(plate); g.add(pg);
     // porthole: a circle inside a square frame (the series' "window" shape)
-    const winWall = R.doors[3] ? 2 : 3;
+    const winWall = [3, 2, 1, 0].find(k => !(k in R.doors)) ?? 3; R.winWall = winWall;
     const wg = onWall(winWall, 0.03); wg.position.y = 2.0; g.add(wg);
     const wx = winWall === 2 ? 2.9 : -2.5;
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.0, 0.08), M.structure); frame.position.set(wx, 0, 0.0); wg.add(frame);
-    const view = new THREE.Mesh(new THREE.CircleGeometry(0.78, 40), new THREE.MeshBasicMaterial({ map: windowTex, fog: false })); view.position.set(wx, 0, 0.05); wg.add(view);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.06, 6, 40), M.doorFrame); rim.position.set(wx, 0, 0.06); wg.add(rim);
+    const WR = theme.neon ? 1.2 : 0.78; // porthole radius
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(WR * 2.55, WR * 2.55, 0.08), M.structure); frame.position.set(wx, 0, 0.0); wg.add(frame);
+    const view = new THREE.Mesh(new THREE.CircleGeometry(WR, 48), new THREE.MeshBasicMaterial({ map: windowTex, fog: false })); view.position.set(wx, 0, 0.05); wg.add(view);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(WR + 0.03, theme.neon ? 0.035 : 0.06, 6, 48), theme.neon ? M.neonCyan : M.doorFrame); rim.position.set(wx, 0, 0.06); wg.add(rim);
     halo(wg, new THREE.Vector3(wx, 0, 0.2), 2.4, '#4f7bd6', 0.18);
     // pipes along the ceiling edges
     E.pipe(g, [-HW, CEIL - 0.3, -HW + 0.3], [HW, CEIL - 0.3, -HW + 0.3], 0.08, M.pipeCold);
@@ -149,6 +174,20 @@ export function createLook(THREE, theme, E) {
       const knob = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), M.lever); knob.position.set(-0.17, 1.42, 0); lv.add(knob);
     }
     for (const d of R.dressing || []) if (DRESS[d]) DRESS[d](R, g);
+    if (theme.neon) neonShell(R, g);
+  }
+  // light lines like the Canva mockup: thin glowing seams on the wall ribs, an amber line along the floor, cyan ceiling strips
+  function neonShell(R, g) {
+    const B = batch();
+    for (let k = 0; k < 4; k++) {
+      const ry = WALL[k].rotY, p = WALL[k].pos(0.13);
+      for (const x of [-4.25, 4.25]) B.add(M.neonSoft, new THREE.BoxGeometry(0.035, RH - 0.9, 0.02), [p.x + Math.cos(ry) * x, MIDY + 0.1, p.z - Math.sin(ry) * x], [0, ry, 0]);
+      const f = WALL[k].pos(0.25), door = k in R.doors;
+      const segs = door ? [[-HW + 0.6, -1.55], [1.55, HW - 0.6]] : [[-HW + 0.6, HW - 0.6]];
+      for (const [a, b] of segs) { const len = b - a, mid = (a + b) / 2; B.add(M.neonAmber, new THREE.BoxGeometry(len, 0.025, 0.05), [f.x + Math.cos(ry) * mid, FLOOR + 0.03, f.z - Math.sin(ry) * mid], [0, ry, 0]); }
+    }
+    for (const x of [-2.5, 2.5]) B.add(M.neonCyan, new THREE.BoxGeometry(0.06, 0.02, 5.8), [x, CEIL - 0.115, 0]);
+    B.flush(g);
   }
 
   // ---- doors: framed bulkhead with a status lamp ----
@@ -159,13 +198,16 @@ export function createLook(THREE, theme, E) {
     const sign = E.label('→ ' + toName, 2.2, 0.42, '#0b0e1c', '#5dff9d', 80); sign.position.set(0, 3.6, 0.09); dg.add(sign);
     const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: col(PAL.kohaku) })); lamp.position.set(1.15, 3.6, 0.1); dg.add(lamp);
     halo(dg, new THREE.Vector3(1.15, 3.6, 0.2), 0.7, PAL.kohaku, theme.halo.door);
+    if (theme.neon) { const B = batch(); // a glowing outline around the door
+      B.add(M.neonCyan, new THREE.BoxGeometry(2.36, 0.035, 0.03), [0, 3.04, 0.1]); B.add(M.neonCyan, new THREE.BoxGeometry(0.035, 3.0, 0.03), [-1.17, 1.54, 0.1]); B.add(M.neonCyan, new THREE.BoxGeometry(0.035, 3.0, 0.03), [1.17, 1.54, 0.1]); B.flush(dg); }
     return { panel, mat: doorMat };
   }
 
   // ---- dials: a circle on a square back plate ----
   function dialStyle(kind) {
     return { plate: lambert(C.dialPlate), wheel: col(kind === 'code' ? C.codeWheel : C.valveWheel), back: metal(C.dialBack), hub: M.pipeGray,
-      pointer: new THREE.MeshBasicMaterial({ color: col(PAL.kinari) }), pipe: M.pipeHot };
+      pointer: new THREE.MeshBasicMaterial({ color: col(PAL.kinari) }), pipe: M.pipeHot,
+      glow: theme.neon ? col(kind === 'code' ? (theme.neon.code || '#2fd6c0') : (theme.neon.valve || '#ff6a1a')) : null };
   }
 
   // ---- labels on 3D panels: dark enamel, thin frame, an amber corner notch ----
@@ -345,6 +387,6 @@ export function createLook(THREE, theme, E) {
   }
   const SND = theme.sound || null;
   const sfx = (name, o) => { if (SND) SND.play(name, o); };
-  return { renderer, buildShell, buildDoor, dialStyle, drawLabelFrame, labelFont, mapCol, setTint, update, enterRoom, theme, sfx,
+  return { renderer, render, resize, setBloom, hasBloom: () => !!composer, buildShell, buildDoor, dialStyle, drawLabelFrame, labelFont, mapCol, setTint, update, enterRoom, theme, sfx,
     audio: ctx => SND && SND.unlock(ctx), loop: (name, on, vol) => SND && SND.loop(name, on, vol), pause: p => SND && SND.pause(p), duck: on => SND && SND.duck(on), setVolume: v => SND && SND.setVolume(v), beep: ms => SND && SND.beep(ms), setAmbience: on => SND && SND.setAmbience(on), hasSound: !!SND };
 }

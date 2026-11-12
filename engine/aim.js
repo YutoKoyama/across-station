@@ -1,6 +1,6 @@
 // ---------- aiming + dial turning (phone roll like a steering wheel) + the thrust ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121517';
+import { faceYaw } from './world.js?v=202611121556';
 
 export const HOLD_SEC = 1.5;
 const THRUST_SEC = 3, THRUST_YAW_TOL = 25, THRUST_PITCH_TOL = 35;
@@ -67,7 +67,7 @@ export function installAim(G) {
   function resetAim() { shownAim = undefined; rebuildAimCache(); } // after a new puzzle was built
   function hintFor(item) {
     if (!item) return '';
-    if (item.type === 'door') return fmt(UI.hintDoor, { room: roomById[item.to].name });
+    if (item.type === 'door') return fmt(G.doorOpen(item) ? UI.hintDoor : (UI.hintDoorShut || '「{room}」への扉は、まだ開かない'), { room: roomById[item.to].name });
     if (item.type === 'valve') {
       const v = item.valve;
       if (!v.locked) return canTurn(v) ? fmt(UI.hintTurn, { sym: v.symbols[v.idx] }) : (UI.hintTapDial || 'タップでバルブを持つ');
@@ -79,8 +79,8 @@ export function installAim(G) {
   let lastAimSfx = 0;
   function setAimVisual(item) { // DOM/material updates only when the aimed object changes
     if (item === shownAim) return;
-    if (shownAim && glowMat(shownAim)) glowMat(shownAim).emissive.setHex(EMISSIVE.none);
-    if (item && glowMat(item)) glowMat(item).emissive.setHex(EMISSIVE[item.type]);
+    if (shownAim && glowMat(shownAim)) glowMat(shownAim).emissive.setHex(shownAim.valve ? shownAim.valve.baseEmissive || EMISSIVE.none : EMISSIVE.none);
+    if (item && glowMat(item)) glowMat(item).emissive.setHex(item.valve && item.valve.baseEmissive ? (item.valve.kind === 'code' ? 0x3ff0d8 : 0xff7424) : EMISSIVE[item.type]);
     if (item && !G.codePlaying && performance.now() - lastAimSfx > AIM_SFX_GAP_MS) { lastAimSfx = performance.now(); G.sfx('aim', { vol: 0.25 }); }
     $('reticle').classList.toggle('aim', !!item);
     shownAim = item;

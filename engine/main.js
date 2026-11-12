@@ -7,19 +7,19 @@
 //   testhooks.js automated device-test hooks              look.js / sound.js  the engine-side theme (art, sound)
 // All parts share one game object G (state + functions), so each file only needs what it uses.
 import * as THREE from '../vendor/three.module.js';
-import { loadContent } from './content.js?v=202611121517';
-import { installWorld } from './world.js?v=202611121517';
-import { installFeedback } from './feedback.js?v=202611121517';
-import { installPuzzle } from './puzzle.js?v=202611121517';
-import { installAim } from './aim.js?v=202611121517';
-import { installView } from './view.js?v=202611121517';
-import { installOnline } from './online.js?v=202611121517';
-import { installHud } from './hud.js?v=202611121517';
-import { installMap } from './map.js?v=202611121517';
-import { installPartner } from './partner.js?v=202611121517';
-import { installGuide } from './guide.js?v=202611121517';
-import { installTestHooks } from './testhooks.js?v=202611121517';
-import { installPlatform } from './platform.js?v=202611121517';
+import { loadContent } from './content.js?v=202611121556';
+import { installWorld } from './world.js?v=202611121556';
+import { installFeedback } from './feedback.js?v=202611121556';
+import { installPuzzle } from './puzzle.js?v=202611121556';
+import { installAim } from './aim.js?v=202611121556';
+import { installView } from './view.js?v=202611121556';
+import { installOnline } from './online.js?v=202611121556';
+import { installHud } from './hud.js?v=202611121556';
+import { installMap } from './map.js?v=202611121556';
+import { installPartner } from './partner.js?v=202611121556';
+import { installGuide } from './guide.js?v=202611121556';
+import { installTestHooks } from './testhooks.js?v=202611121556';
+import { installPlatform } from './platform.js?v=202611121556';
 
 // adaptive resolution: lower it when fps stays low, and raise it again once fps has been stable for a while
 const FPS_LOW = 50, FPS_GOOD = 58, LOW_SECS = 2, GOOD_SECS = 10, RATIO_MIN = 1, RATIO_MAX = 1.5, RATIO_STEP = 0.25;
@@ -27,7 +27,7 @@ const FPS_LOW = 50, FPS_GOOD = 58, LOW_SECS = 2, GOOD_SECS = 10, RATIO_MIN = 1, 
 export async function start() {
   // the PC simulation tests swap in a fake renderer and a fake theme loader here (globalThis.__SIM__); the app never sets it
   const SIM = globalThis.__SIM__ || {};
-  const lookModule = SIM.lookModule ? await SIM.lookModule() : await import('./look.js?v=202611121517');
+  const lookModule = SIM.lookModule ? await SIM.lookModule() : await import('./look.js?v=202611121556');
   const G = { P: (window.Capacitor && window.Capacitor.Plugins) || {}, $: id => document.getElementById(id), paused: false };
   installPlatform(G);
   await loadContent(G, THREE, lookModule);
@@ -50,10 +50,11 @@ export async function start() {
   // ---------- loop ----------
   const { renderer, scene, camera, $ } = G;
   let lowCount = 0, goodCount = 0, lastAction = null, raiseBlocked = false;
-  function applyRatio(cap) { G.pixelRatioCap = cap; renderer.setPixelRatio(Math.min(window.devicePixelRatio, cap)); renderer.setSize(G.viewW(), G.viewH()); }
+  function applyRatio(cap) { G.pixelRatioCap = cap; renderer.setPixelRatio(Math.min(window.devicePixelRatio, cap)); renderer.setSize(G.viewW(), G.viewH()); if (G.LOOK.resize) G.LOOK.resize(G.viewW(), G.viewH(), renderer.getPixelRatio()); }
   function adaptResolution(fps) {
     lowCount = fps < FPS_LOW ? lowCount + 1 : 0;
     goodCount = fps >= FPS_GOOD ? goodCount + 1 : 0;
+    if (lowCount >= LOW_SECS * 2 && G.pixelRatioCap <= RATIO_MIN && G.LOOK.setBloom && !G.bloomAutoOff) { G.bloomAutoOff = true; G.LOOK.setBloom(false); lowCount = 0; } // still slow at the lowest resolution: drop the light bleed
     if (lowCount >= LOW_SECS && G.pixelRatioCap > RATIO_MIN) {
       if (lastAction === 'raise') raiseBlocked = true; // raising made it slow again: stop trying (avoids flicker back and forth)
       applyRatio(Math.max(RATIO_MIN, G.pixelRatioCap - RATIO_STEP)); lowCount = 0; goodCount = 0; lastAction = 'lower';
@@ -71,7 +72,7 @@ export async function start() {
     G.updateCamera(dt); G.updateAim(dt); G.loopCount++;
     G.LOOK.update(dt, G.starDrift);
     G.tickMap(); G.tickPartner(dt);
-    renderer.render(scene, camera);
+    if (G.LOOK.render) G.LOOK.render(); else renderer.render(scene, camera);
     frames++;
     if (now - t0 >= 1000) {
       const fps = frames * 1000 / (now - t0); frames = 0; t0 = now;
@@ -88,5 +89,6 @@ export async function start() {
   requestAnimationFrame(loop);
   window.__appStage = 'ready';
   window.__appReady = true;
+  { const e = document.getElementById('err'); if (e && /読み込みが終わりませんでした|まだ準備ができていません/.test(e.textContent || '')) e.style.display = 'none'; }
   return G;
 }

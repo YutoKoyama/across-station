@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>ACROSS</title>
 <!-- the theme's stylesheet is linked here (not only from look.js) so it is ready before the first paint -->
-<link rel="stylesheet" href="themes/tomoshibi/theme.css?v=202611121517">
+<link rel="stylesheet" href="themes/tomoshibi/theme.css?v=202611121556">
 <style>
   /* until the theme is ready (body.look-new), show only a quiet loading line - never the bare base styles */
   body:not(.look-new) { background:#0a0d16; }
@@ -144,7 +144,7 @@
   window.addEventListener('unhandledrejection', function (e) { showError('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
   setTimeout(function () {
     if (!window.__appReady) showError('3D部分の読み込みが終わりませんでした（段階: ' + (window.__appStage || 'モジュール未読み込み') + '）');
-  }, 4000);
+  }, 25000); // phone networks: textures, models and sounds can take a while
   document.getElementById('btnStart').addEventListener('click', function () {
     if (!window.__appReady) showError('まだ準備ができていません（段階: ' + (window.__appStage || 'モジュール未読み込み') + '）');
   });
@@ -153,7 +153,7 @@
 <script>window.__PUBLIC_WEB__ = true; // published web build: no test hooks</script>
 <script type="module">
 // The engine lives in www/engine/ (one file per role, see engine/main.js); the story, rooms and wording in www/packs/<id>/pack.json.
-import { start } from './engine/main.js?v=202611121517';
+import { start } from './engine/main.js?v=202611121556';
 window.__appStage = 'three loaded';
 await start();
 </script>
