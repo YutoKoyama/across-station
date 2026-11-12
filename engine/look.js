@@ -31,7 +31,7 @@ export async function loadTheme(THREE, id) {
   }
   // sound set (CC0 Kenney audio + synthesis) - engine/sound.js decodes the files once audio is unlocked by a tap
   if (theme.sfx) { const S = await import('./sound.js'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
-  if (theme.css) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + theme.css; document.head.appendChild(l); }
+  if (theme.css && ![...document.querySelectorAll('link[rel=stylesheet]')].some(x => x.getAttribute('href') === base + theme.css)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + theme.css; document.head.appendChild(l); }
   return theme;
 }
 

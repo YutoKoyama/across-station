@@ -115,3 +115,17 @@ body.look-new #vol { accent-color: var(--kohaku); }
 
 /* dial turning hint (first few turns): two curved arrows around the reticle, rocking like a steering wheel */
 body.look-new #turnHint { color: var(--kohaku); opacity: 0.85; filter: drop-shadow(0 0 6px rgba(242, 162, 58, 0.45)); }
+
+/* start / ending screens fit any phone (2026-11-12): centered when they fit, scroll from the top when they do not */
+body.look-new #start, body.look-new #done { justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+  padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+body.look-new #start::before, body.look-new #start::after, body.look-new #done::before, body.look-new #done::after { content: ''; flex: 1 0 0; min-height: 0; }
+body.look-new #start > *, body.look-new #done > * { flex: none; }
+@media (max-height: 760px) {
+  body.look-new #start { gap: 10px; padding-left: 20px; padding-right: 20px; }
+  body.look-new #start h1 { font-size: 23px; padding-bottom: 8px; }
+  body.look-new #start p { font-size: 13px; line-height: 1.6; }
+  body.look-new #startHowto { font-size: 12px !important; }
+  body.look-new #onlineBox { gap: 6px; padding: 8px 12px; }
+  body.look-new #btnStart { padding: 13px 24px; }
+}

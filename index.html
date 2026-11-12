@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>ACROSS</title>
+<!-- the theme's stylesheet is linked here (not only from look.js) so it is ready before the first paint -->
+<link rel="stylesheet" href="themes/tomoshibi/theme.css">
 <style>
+  /* until the theme is ready (body.look-new), show only a quiet loading line - never the bare base styles */
+  body:not(.look-new) { background:#0a0d16; }
+  body:not(.look-new) > *:not(#err) { visibility:hidden !important; }
+  body:not(.look-new)::after { content:'読み込み中…'; position:fixed; left:0; right:0; top:50%; text-align:center;
+    color:rgba(230,221,200,.62); font-size:13px; letter-spacing:.3em; }
   html, body { margin:0; height:100%; overflow:hidden; background:#000; color:#e8ecff;
     font-family:system-ui,sans-serif; touch-action:none; -webkit-user-select:none; user-select:none; }
   canvas { display:block; }
