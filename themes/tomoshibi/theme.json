@@ -136,41 +136,54 @@
       "ambience": "reactor"
     },
     "airlock": {
-      "lamp": "#ffd0c8",
-      "lampIntensity": 12,
+      "lamp": "#FFC8BC",
+      "lampIntensity": 11,
       "fog": "#1a1012",
-      "ambience": "hangar"
+      "ambience": "hangar",
+      "wall": "#D8B4C4",
+      "seam": "#7A3030"
     },
     "comms": {
-      "lamp": "#a8ffd6",
-      "lampIntensity": 12,
+      "lamp": "#A8FFD6",
+      "lampIntensity": 11,
       "fog": "#0d1a16",
-      "ambience": "command"
+      "ambience": "command",
+      "wall": "#B7D5D8",
+      "seam": "#1D6A5A"
     },
     "greenhouse": {
-      "lamp": "#d8ffb0",
-      "lampIntensity": 15,
+      "lamp": "#D8FFB0",
+      "lampIntensity": 12,
       "fog": "#0f1a0c",
-      "ambience": "command"
+      "ambience": "command",
+      "wall": "#B7DAA9",
+      "seam": "#3F7A2E"
     },
     "storage": {
-      "lamp": "#ffb36a",
-      "lampIntensity": 11,
+      "lamp": "#FFB36A",
+      "lampIntensity": 10,
       "fog": "#1a120a",
-      "ambience": "hangar"
+      "ambience": "hangar",
+      "wall": "#C8C0B4",
+      "seam": "#4A4A44"
     },
     "quarters": {
-      "lamp": "#ffd59a",
-      "lampIntensity": 13,
+      "lamp": "#FFD59A",
+      "lampIntensity": 11,
       "fog": "#1a140c",
-      "ambience": "command"
+      "ambience": "command",
+      "wall": "#F0D2C4",
+      "seam": "#6A5A48"
     },
     "medbay": {
-      "lamp": "#d6ecff",
-      "lampIntensity": 14,
+      "lamp": "#E4F2FF",
+      "lampIntensity": 11,
       "fog": "#0c1420",
-      "ambience": "reactor"
-    }
+      "ambience": "reactor",
+      "wall": "#CCDAE8",
+      "seam": "#8FB4CC"
+    },
+    "_comment": "wall = colour the baked walls/floor/ceiling are multiplied by (instead of light.bakedNormal); seam = the thin wall-rib neon of that room (cyan/amber role lines stay). The 3 prologue rooms have none: unchanged."
   },
   "sfx": {
     "aim": [

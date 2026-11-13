@@ -79,7 +79,8 @@
       "code": "A-04",
       "dressing": [
         "hazardBands",
-        "warnBeacon"
+        "warnBeacon",
+        "suitRack"
       ],
       "mood": "airlock"
     },
@@ -91,7 +92,9 @@
       "color": "#1d4a3c",
       "lever": false,
       "code": "R-05",
-      "dressing": [],
+      "dressing": [
+        "commsRack"
+      ],
       "mood": "comms"
     },
     {
@@ -102,7 +105,9 @@
       "color": "#2c5a26",
       "lever": false,
       "code": "G-06",
-      "dressing": [],
+      "dressing": [
+        "planterBeds"
+      ],
       "mood": "greenhouse"
     },
     {
@@ -114,7 +119,8 @@
       "lever": false,
       "code": "S-07",
       "dressing": [
-        "cargoBarrels"
+        "cargoBarrels",
+        "storageShelf"
       ],
       "mood": "storage"
     },
@@ -126,7 +132,9 @@
       "color": "#5a4628",
       "lever": false,
       "code": "Q-08",
-      "dressing": [],
+      "dressing": [
+        "bunkBed"
+      ],
       "mood": "quarters"
     },
     {
@@ -137,17 +145,20 @@
       "color": "#29405e",
       "lever": false,
       "code": "M-09",
-      "dressing": [],
+      "dressing": [
+        "medBed",
+        "cleanWall"
+      ],
       "mood": "medbay"
     }
   ],
   "roles": {
     "A": {
-      "label": "A・整備係（格納庫）",
+      "label": "A・整備係",
       "start": "hangar"
     },
     "B": {
-      "label": "B・技術係（発電室）",
+      "label": "B・技術係",
       "start": "power"
     }
   },
@@ -216,7 +227,7 @@
       "hintLocked": "（固定されている）",
       "noticeNoSensor": "スマホの向きのセンサーから値が届きません。画面をなぞって見回すモードに切り替えました。",
       "noticeRest": "15分たちました。目や気分が疲れていたら、少し休憩しましょう。",
-      "noticePeerLeft": "{other}との通信が切れました。相手がもう一度参加すると続きから遊べます。",
+      "noticePeerLeft": "{other}との通信が切れました。部屋を作った人（A）の画面が開いたままなら、同じルームコードで参加し直すと続きから遊べます。",
       "noticeSent": "送信：「{text}」",
       "onlineRelayDown": "PCの中継につながりません（06_online_play.cmd を起動しているか確認）",
       "onlineWaiting": "ルームコード {code}　相手の参加を待っています…",
@@ -233,7 +244,7 @@
       "onlineIntroRelay": "オンラインで2人で遊ぶ（PCで 06_online_play.cmd を起動）",
       "onlineNoBroker": "オンラインの仲介につながりません。ネット接続を確かめて、もう一度試してください",
       "onlineNoRoom": "そのルームコードの部屋が見つかりません。コードを確かめてください",
-      "youAre": "あなた：{role}",
+      "youAre": "あなた：{role}　いま：{room}",
       "map": {
         "title": "ステーションの地図",
         "you": "あなた",
@@ -248,7 +259,11 @@
       "guideHelp": "画面の説明",
       "hintTapDial": "タップでバルブを持つ",
       "noticeStamp": "{other}：「{text}」",
-      "hintDoorShut": "「{room}」への扉は、まだ開かない"
+      "hintDoorShut": "「{room}」への扉は、まだ開かない",
+      "onlineFull": "この部屋はすでに2人で遊んでいます。通信が切れた直後なら、少し待ってからもう一度「参加」を押してください",
+      "noticeResumed": "続きから再開しました（いまの段階まで進んだ状態です）",
+      "noticePeerLeftA": "{other}との通信が切れました。この画面を開いたまま待ってください。{other}がページを再読み込みして、同じルームコード（{code}）で参加すると続きから遊べます。",
+      "noticePeerLeftB": "{other}との通信が切れました。ページを再読み込みして、同じルームコード（{code}）で「参加」を押すと続きから遊べます（{other}の画面が開いたままの場合）。"
     },
     "todo": {
       "valve": "自分の部屋のバルブを、正しい記号に合わせる。手がかりは別の部屋にあるので、相手と話して探そう",
@@ -293,7 +308,7 @@
     ],
     "wings": {
       "skyDialTitle": "天窓ダイヤル",
-      "skyTable": "天窓の配電表（葉の向く方位の天窓を開ける）\n{d0}＝{s0}　{d1}＝{s1}\n{d2}＝{s2}　{d3}＝{s3}",
+      "skyTable": "天窓の配電表\n{d0}＝{s0}　{d1}＝{s1}\n{d2}＝{s2}　{d3}＝{s3}",
       "heartIdle": "心拍モニター\n（まだ反応がない）",
       "heartPlaying": "心拍モニター\n♥ 受信中…　リズムを覚えて相手へ",
       "heartDone": "心拍モニター\n受信完了（もう一度：1.5秒見つめる）",
@@ -302,14 +317,14 @@
       "padMiss": "同期パッド\nずれている…もう一度（{n}/{m}）",
       "padDone": "同期パッド\n同期完了",
       "photoHead": "色あせた写真（裏に「しずく 最初の日」）\n写っている人：",
-      "locker": "ロッカー {n}：{name}\n{items}",
-      "lockerOpen": "ロッカーが開いた\n中に博士の最後のメモ",
+      "locker": "ロッカー {n}\n{name}\n{items}",
+      "lockerOpen": "ロッカーが開いた\n持ち主は{name}博士だった\n中に博士の最後のメモ",
       "lockerWrong": "ロッカーは開かない。持ち物が写真と少し違うようだ",
       "lastMemo": "博士の最後のメモ：「しずくは来月、役目を終える。ミズホ、きみは自分で考えていい。いつか誰かと、本物の海を見せてやってくれ」",
       "heartHint": "（1.5秒見つめて鼓動を受け取る）",
       "padHint": "（照準を合わせてリズムよくタップ）",
       "lockerHint": "（1.5秒見つめて開ける）",
-      "gazeHint": "観測窓を2人で3秒見つめる",
+      "gazeHint": "右舷の高い観測窓を2人で3秒見つめる",
       "gazeWait": "相手も窓を見るのを待っています"
     }
   },
@@ -580,7 +595,7 @@
     "photo": {
       "room": "quarters",
       "wall": 2,
-      "x": -2.2,
+      "x": 0,
       "lockerRoom": "airlock",
       "lockerWall": 0
     },
@@ -591,7 +606,7 @@
       {
         "room": "comms",
         "wall": 2,
-        "x": -2.4,
+        "x": 0,
         "text": "博士の音声メモ #1（通信室）\nミズホは今日も、地上から届く声を\n一字一句、大事そうに保存している。"
       },
       {
@@ -603,7 +618,7 @@
       {
         "room": "medbay",
         "wall": 2,
-        "x": -2.4,
+        "x": 0,
         "text": "博士の音声メモ #3（医務室）\n乗組員は先月の補給船で、全員地上へ帰した。\n残ったのは、わたしとミズホだけだ。"
       },
       {
@@ -615,9 +630,9 @@
       {
         "room": "airlock",
         "wall": 3,
-        "x": 2.4,
+        "x": 0,
         "y": 0.5,
-        "text": "エアロック\n大きな観測窓。外を向けば、地球が見える。"
+        "text": "エアロック\n右舷の壁の高い所に、大きな観測窓。\n外を向けば、地球が見える。"
       }
     ]
   }

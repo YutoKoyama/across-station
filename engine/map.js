@@ -73,7 +73,7 @@ export function installMap(G) {
     if (yaw !== undefined && yaw !== null) s += `<polygon class="cone" points="${cone(yaw, big)}" fill="${col}" opacity="0.6"/>`;
     s += `<circle r="${r}" fill="${col}" stroke="#10141F" stroke-width="0.02"/>`;
     s += `<text y="${(r * 0.36).toFixed(3)}" font-size="${(r * 1.15).toFixed(3)}" text-anchor="middle" fill="#10141F" font-weight="700">${k}</text>`;
-    if (big) s += `<text y="${(-r - 0.05).toFixed(3)}" font-size="0.09" text-anchor="middle" fill="${col}" font-weight="700">${mine ? (M.you || 'あなた') : (M.partner || '相手')}</text>`;
+    if (big) s += `<text y="${(-r - 0.05).toFixed(3)}" font-size="0.11" text-anchor="middle" fill="${col}" font-weight="700" style="letter-spacing:0">${mine ? (M.you || 'あなた') : (M.partner || '相手')}</text>`;
     return s + '</g>';
   }
   function cone(yaw, big) { // a wedge pointing where that person is looking
@@ -82,7 +82,7 @@ export function installMap(G) {
     return P([[0, 0], [a[0] * L, a[1] * L], [b[0] * L, b[1] * L]]);
   }
   function svg(big) {
-    let s = `<svg xmlns="${NS}" viewBox="${vb.map(n => n.toFixed(3)).join(' ')}" width="100%" height="100%" font-family="inherit">`;
+    let s = `<svg xmlns="${NS}" viewBox="${vb.map(n => n.toFixed(3)).join(' ')}" width="100%" height="100%" font-family="inherit" style="letter-spacing:0">`;
     for (const R of ROOMS) s += roomShapes(R, big) + doorShapes(R);
     s += marker(other(), big) + marker(meKey(), big);
     return s + '</svg>';

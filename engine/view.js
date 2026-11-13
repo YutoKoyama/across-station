@@ -1,7 +1,7 @@
 // ---------- view: phone orientation -> camera, touch look, tapping doors, moving between rooms ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611130129';
-import { sleep } from './feedback.js?v=202611130129';
+import { faceYaw } from './world.js?v=202611130320';
+import { sleep } from './feedback.js?v=202611130320';
 
 export function installView(G) {
   const { $, camera, renderer, ROOMS, roomById, players } = G;
@@ -41,7 +41,11 @@ export function installView(G) {
       camera.quaternion.copy(smoothQ);
     }
     levelWhileTurning(dt);
+    camera.quaternion.multiply(TILT_BIAS); // see TILT_BIAS
   }
+  // review 2 S7: looking EXACTLY at a corner (yaw 45 deg with pitch and roll exactly 0) made every textured wall and the floor
+  // sample black (SwiftShader; the camera matrix is perfectly symmetric). A fixed 0.03 deg tilt keeps that exact case from ever happening.
+  const TILT_BIAS = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.0005);
   // ---------- dial turning: keep the view level while a dial is held ----------
   // Turning the phone like a steering wheel also rolled the whole view, so on screen the room spun and the wheel
   // (turning with the phone) seemed to stand still. While a dial is held the camera keeps only yaw + pitch: the room
@@ -83,7 +87,7 @@ export function installView(G) {
   // ---------- moving between rooms: 0.3 s fade, view direction kept ----------
   let moving = false;
   async function fadeSwap(fn) { if (moving) return; moving = true; $('fade').style.opacity = 1; await sleep(150); fn(); await sleep(30); $('fade').style.opacity = 0; await sleep(150); moving = false; }
-  function showRoom(id) { for (const R of ROOMS) R.group.visible = (R.id === id); G.partnerJump = true; G.updateMap(); G.LOOK.enterRoom(roomById[id]); }
+  function showRoom(id) { for (const R of ROOMS) R.group.visible = (R.id === id); G.partnerJump = true; G.updateMap(); if (G.updateWho) G.updateWho(); G.LOOK.enterRoom(roomById[id]); }
   function goThrough(to) { G.sfx('doorOpen', { vol: 0.5 }); G.sfx('doorClose', { vol: 0.35, delay: 0.32 }); fadeSwap(() => { players[G.cur].room = to; showRoom(to); G.grabbed = null; G.haptic('door'); G.netSend({ t: 'room', who: G.cur, room: to }); }); }
   function showPlayer(k, fade = true) {
     const f = () => { G.cur = k; showRoom(players[k].room); G.recenterPending = true; if (G.touchMode) recenter(); G.grabbed = null; G.updateStatus(); };

@@ -7,20 +7,20 @@
 //   testhooks.js automated device-test hooks              look.js / sound.js  the engine-side theme (art, sound)
 // All parts share one game object G (state + functions), so each file only needs what it uses.
 import * as THREE from '../vendor/three.module.js';
-import { loadContent } from './content.js?v=202611130129';
-import { installWorld } from './world.js?v=202611130129';
-import { installFeedback } from './feedback.js?v=202611130129';
-import { installPuzzle } from './puzzle.js?v=202611130129';
-import { installAim } from './aim.js?v=202611130129';
-import { installView } from './view.js?v=202611130129';
-import { installOnline } from './online.js?v=202611130129';
-import { installHud } from './hud.js?v=202611130129';
-import { installMap } from './map.js?v=202611130129';
-import { installPartner } from './partner.js?v=202611130129';
-import { installGuide } from './guide.js?v=202611130129';
-import { installWings } from './wings.js?v=202611130129';
-import { installTestHooks } from './testhooks.js?v=202611130129';
-import { installPlatform } from './platform.js?v=202611130129';
+import { loadContent } from './content.js?v=202611130320';
+import { installWorld } from './world.js?v=202611130320';
+import { installFeedback } from './feedback.js?v=202611130320';
+import { installPuzzle } from './puzzle.js?v=202611130320';
+import { installAim } from './aim.js?v=202611130320';
+import { installView } from './view.js?v=202611130320';
+import { installOnline } from './online.js?v=202611130320';
+import { installHud } from './hud.js?v=202611130320';
+import { installMap } from './map.js?v=202611130320';
+import { installPartner } from './partner.js?v=202611130320';
+import { installGuide } from './guide.js?v=202611130320';
+import { installWings } from './wings.js?v=202611130320';
+import { installTestHooks } from './testhooks.js?v=202611130320';
+import { installPlatform } from './platform.js?v=202611130320';
 
 // adaptive resolution: lower it when fps stays low, and raise it again once fps has been stable for a while
 const FPS_LOW = 50, FPS_GOOD = 58, LOW_SECS = 2, GOOD_SECS = 10, RATIO_MIN = 1, RATIO_MAX = 1.5, RATIO_STEP = 0.25;
@@ -28,7 +28,7 @@ const FPS_LOW = 50, FPS_GOOD = 58, LOW_SECS = 2, GOOD_SECS = 10, RATIO_MIN = 1, 
 export async function start() {
   // the PC simulation tests swap in a fake renderer and a fake theme loader here (globalThis.__SIM__); the app never sets it
   const SIM = globalThis.__SIM__ || {};
-  const lookModule = SIM.lookModule ? await SIM.lookModule() : await import('./look.js?v=202611130129');
+  const lookModule = SIM.lookModule ? await SIM.lookModule() : await import('./look.js?v=202611130320');
   const G = { P: (window.Capacitor && window.Capacitor.Plugins) || {}, $: id => document.getElementById(id), paused: false };
   installPlatform(G);
   await loadContent(G, THREE, lookModule);
@@ -65,16 +65,24 @@ export async function start() {
     }
   }
   G.adaptResolution = adaptResolution;
-  let frames = 0, t0 = performance.now(), prev = performance.now();
+  let frames = 0, t0 = performance.now(), prev = performance.now(), lastErrMsg = null, errRun = 0, errShown = false;
+  const ERR_SHOW_FRAMES = 30; // about 0.5 s of the same error every frame = the game is stuck: tell the player
   G.gameClock = 0; G.lastLoopReal = 0; G.loopCount = 0; // game time (sum of frame dt) - test hooks wait on this, not on the wall clock (P11)
   function loop(now) {
     const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
     if (G.paused) { requestAnimationFrame(loop); return; }
     G.gameClock += dt; G.lastLoopReal = performance.now();
-    G.updateCamera(dt); G.updateAim(dt); G.loopCount++;
-    G.LOOK.update(dt, G.starDrift);
-    G.tickMap(); G.tickPartner(dt);
-    if (G.LOOK.render) G.LOOK.render(); else renderer.render(scene, camera);
+    try { // one bad frame (e.g. odd state from the network) must not stop the loop for good (review 1 S6)
+      G.updateCamera(dt); G.updateAim(dt); G.loopCount++;
+      G.LOOK.update(dt, G.starDrift);
+      G.tickMap(); G.tickPartner(dt);
+      if (G.LOOK.render) G.LOOK.render(); else renderer.render(scene, camera);
+      errRun = 0;
+    } catch (err) { // log each new message once; if the SAME error repeats for ERR_SHOW_FRAMES frames, show the error box (review 2 M1)
+      const msg = String((err && err.stack) || err);
+      if (msg !== lastErrMsg) { lastErrMsg = msg; errRun = 0; errShown = false; console.error('loop', err); }
+      if (++errRun >= ERR_SHOW_FRAMES && !errShown) { errShown = true; const show = G.showError || window.showError; if (typeof show === 'function') show('描画ループのエラー\n' + msg); }
+    }
     frames++;
     if (now - t0 >= 1000) {
       const fps = frames * 1000 / (now - t0); frames = 0; t0 = now;
@@ -82,7 +90,7 @@ export async function start() {
       adaptResolution(fps);
       G.updatePartner(); G.updateTodo();
       $('res').textContent = '解像度×' + renderer.getPixelRatio().toFixed(2);
-      $('info').textContent = `${G.cur}：${G.roomById[G.players[G.cur].room].name}\n` + (G.touchMode ? '指で見回し' : (G.gotSensor ? 'センサー' : 'センサー待ち'));
+      $('info').textContent = `${G.cur}：${(G.roomById[G.players[G.cur].room] || {}).name || ''}\n` + (G.touchMode ? '指で見回し' : (G.gotSensor ? 'センサー' : 'センサー待ち'));
     }
     requestAnimationFrame(loop);
   }

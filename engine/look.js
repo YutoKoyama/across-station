@@ -9,7 +9,7 @@ import { mergeGeometries } from '../vendor/addons/utils/BufferGeometryUtils.js';
 
 export async function loadTheme(THREE, id) {
   const base = `themes/${id}/`;
-  const r = await fetch(base + 'theme.json?v=202611130129');
+  const r = await fetch(base + 'theme.json?v=202611130320');
   if (!r.ok) throw new Error('theme not found: ' + id);
   const theme = await r.json();
   const loader = new THREE.TextureLoader();
@@ -30,7 +30,7 @@ export async function loadTheme(THREE, id) {
     }));
   }
   // sound set (CC0 Kenney audio + synthesis) - engine/sound.js decodes the files once audio is unlocked by a tap
-  if (theme.sfx) { const S = await import('./sound.js?v=202611130129'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
+  if (theme.sfx) { const S = await import('./sound.js?v=202611130320'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
   if (theme.css && ![...document.querySelectorAll('link[rel=stylesheet]')].some(x => (x.getAttribute('href') || '').split('?')[0] === base + theme.css)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + theme.css; document.head.appendChild(l); }
   return theme;
 }
@@ -55,11 +55,14 @@ export function createLook(THREE, theme, E) {
     band: new THREE.MeshBasicMaterial({ color: col(C.starBand) }),
     lever: lambert(C.lever),
   };
+  const MOOD = theme.moods || {};
+  const moodOf = R => MOOD[R.mood] || MOOD.default || {};
   const baked = []; // { mat, base: Color } - baked-light materials, tinted by the story lights (cues)
   function bakedMat(map, tint) {
     const m = new THREE.MeshBasicMaterial({ map, color: tint.clone() }); baked.push({ mat: m, base: tint.clone() }); return m;
   }
-  const roomTint = R => new THREE.Color(1, 1, 1).lerp(col(R.color || '#ffffff').multiplyScalar(2.2), theme.roomTintStrength ?? 0.25).multiply(col(L.bakedNormal || '#ffffff')); // bakedNormal: overall grade of the baked walls
+  // bakedNormal: overall grade of the baked walls; a room mood may set its own wall grade (visual review 1, M5: the 6 wing rooms)
+  const roomTint = R => new THREE.Color(1, 1, 1).lerp(col(R.color || '#ffffff').multiplyScalar(2.2), theme.roomTintStrength ?? 0.25).multiply(col(moodOf(R).wall || L.bakedNormal || '#ffffff'));
   const halos = []; // { sprite, base, pulse }
   function halo(parent, pos, size, color, opacity, pulse = 0) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: theme.tex.halo, color: col(color), transparent: true, opacity,
@@ -82,8 +85,6 @@ export function createLook(THREE, theme, E) {
       flush(parent) { for (const [mat, list] of parts) { const geo = mergeGeometries(list, false); if (geo) parent.add(new THREE.Mesh(geo, mat)); } parts.clear(); },
     };
   }
-  const MOOD = theme.moods || {};
-  const moodOf = R => MOOD[R.mood] || MOOD.default || {};
   let sceneRef = null;
   // window views share one texture (rotates slowly = the station is spinning)
   const windowTex = theme.tex.window; windowTex.center.set(0.5, 0.5);
@@ -190,10 +191,10 @@ export function createLook(THREE, theme, E) {
   }
   // light lines like the Canva mockup: thin glowing seams on the wall ribs, an amber line along the floor, cyan ceiling strips
   function neonShell(R, g) {
-    const B = batch();
+    const B = batch(), seamCol = moodOf(R).seam, seam = seamCol ? new THREE.MeshBasicMaterial({ color: col(seamCol) }) : M.neonSoft; // rib seams in the room's colour; cyan / amber role lines stay
     for (let k = 0; k < 4; k++) {
       const ry = WALL[k].rotY, p = WALL[k].pos(0.13);
-      for (const x of [-4.25, 4.25]) B.add(M.neonSoft, new THREE.BoxGeometry(0.035, RH - 0.9, 0.02), [p.x + Math.cos(ry) * x, MIDY + 0.1, p.z - Math.sin(ry) * x], [0, ry, 0]);
+      for (const x of [-4.25, 4.25]) B.add(seam, new THREE.BoxGeometry(0.035, RH - 0.9, 0.02), [p.x + Math.cos(ry) * x, MIDY + 0.1, p.z - Math.sin(ry) * x], [0, ry, 0]);
       const f = WALL[k].pos(0.25), door = k in R.doors;
       const segs = door ? [[-HW + 0.6, -1.55], [1.55, HW - 0.6]] : [[-HW + 0.6, HW - 0.6]];
       for (const [a, b] of segs) { const len = b - a, mid = (a + b) / 2; B.add(M.neonAmber, new THREE.BoxGeometry(len, 0.025, 0.05), [f.x + Math.cos(ry) * mid, FLOOR + 0.03, f.z - Math.sin(ry) * mid], [0, ry, 0]); }
@@ -363,6 +364,91 @@ export function createLook(THREE, theme, E) {
       B.flush(g);
     },
     coolantTank(R, g) { prop('tank', g, 3.6, -3.6, 0.3, 1.4); },
+    // ---------- the 6 wing rooms (visual review 1, M5): one plain landmark each, Box / Cylinder only, merged per material ----------
+    suitRack(R, g) { // エアロック: two space suits hanging in the front-left corner
+      const B = batch(), suit = lambert('#bdb8ae'), visor = new THREE.MeshBasicMaterial({ color: col('#1d5f78') });
+      B.add(M.propDark, new THREE.BoxGeometry(0.06, 0.06, 1.6), [-4.5, FLOOR + 2.05, -3.45]);
+      for (const z of [-3.9, -3.0]) {
+        B.add(suit, new THREE.CylinderGeometry(0.26, 0.22, 0.95, 12), [-4.15, FLOOR + 1.05, z]);
+        B.add(suit, new THREE.CylinderGeometry(0.1, 0.1, 0.55, 8), [-4.15, FLOOR + 0.3, z - 0.1]).add(suit, new THREE.CylinderGeometry(0.1, 0.1, 0.55, 8), [-4.15, FLOOR + 0.3, z + 0.1]);
+        B.add(suit, new THREE.SphereGeometry(0.2, 14, 10), [-4.15, FLOOR + 1.72, z]);
+        B.add(visor, new THREE.BoxGeometry(0.06, 0.12, 0.24), [-3.97, FLOOR + 1.74, z]);
+        B.add(M.propMetal, new THREE.BoxGeometry(0.16, 0.42, 0.34), [-4.45, FLOOR + 1.15, z]);
+      }
+      B.flush(g);
+    },
+    commsRack(R, g) { // 通信室: two equipment racks with rows of status LEDs (back-left corner)
+      const B = batch(), body = lambert('#1a2232'), led = new THREE.MeshBasicMaterial({ color: col('#3ea7c2') }), ledA = new THREE.MeshBasicMaterial({ color: col('#b9772f') });
+      for (const x of [-3.9, -3.05]) {
+        B.add(body, new THREE.BoxGeometry(0.8, 2.3, 0.6), [x, FLOOR + 1.15, 4.6]);
+        for (let r = 0; r < 8; r++) for (let c = 0; c < 3; c++) B.add((r * 3 + c) % 5 === 2 ? ledA : led, new THREE.BoxGeometry(0.08, 0.025, 0.01), [x - 0.22 + c * 0.22, FLOOR + 0.5 + r * 0.22, 4.295]);
+      }
+      // a desk under the sync pad (front wall) with a radio set: seen whenever you face the pad
+      B.add(M.propDark, new THREE.BoxGeometry(2.4, 0.06, 0.7), [0, FLOOR + 0.76, -4.55]);
+      for (const x of [-1.1, 1.1]) B.add(M.propDark, new THREE.BoxGeometry(0.06, 0.76, 0.6), [x, FLOOR + 0.38, -4.55]);
+      B.add(body, new THREE.BoxGeometry(0.7, 0.26, 0.4), [-0.6, FLOOR + 0.92, -4.6]).add(led, new THREE.BoxGeometry(0.5, 0.03, 0.01), [-0.6, FLOOR + 0.98, -4.395]).add(ledA, new THREE.BoxGeometry(0.08, 0.08, 0.01), [-0.75, FLOOR + 0.88, -4.395]);
+      B.add(M.propMetal, new THREE.CylinderGeometry(0.015, 0.015, 0.3, 6), [0.7, FLOOR + 0.94, -4.7]).add(M.propMetal, new THREE.CylinderGeometry(0.2, 0.04, 0.08, 14), [0.7, FLOOR + 1.1, -4.7], [0.6, 0, 0]);
+      B.flush(g);
+    },
+    planterBeds(R, g) { // 温室: low planter beds along the front and back walls
+      const B = batch(), box = lambert('#3a2c22'), green = lambert('#3d6b34');
+      for (const z of [-4.62, 4.62]) { B.add(box, new THREE.BoxGeometry(7.6, 0.3, 0.5), [0, FLOOR + 0.15, z]); B.add(green, new THREE.BoxGeometry(7.4, 0.1, 0.4), [0, FLOOR + 0.33, z]); }
+      B.flush(g);
+    },
+    medBed(R, g) { // 医務室 (review 2 M1): a bed on legs with rails (open underneath), pillow, headboard, an IV stand; muted colours
+      const B = batch(), frame = lambert('#4a5466'), rail = lambert('#8a94a4'), matt = lambert('#9fb0c0'), linen = lambert('#c8d2dc'), x = 4.3;
+      for (const dx of [-0.4, 0.4]) for (const dz of [-0.95, 0.95]) B.add(frame, new THREE.BoxGeometry(0.06, 0.45, 0.06), [x + dx, FLOOR + 0.225, dz]);
+      B.add(frame, new THREE.BoxGeometry(0.86, 0.06, 1.96), [x, FLOOR + 0.48, 0]);
+      for (const dx of [-0.45, 0.45]) { B.add(rail, new THREE.BoxGeometry(0.04, 0.05, 1.5), [x + dx, FLOOR + 0.74, 0.1]); for (const dz of [-0.6, 0.8]) B.add(rail, new THREE.BoxGeometry(0.03, 0.2, 0.03), [x + dx, FLOOR + 0.62, dz]); }
+      B.add(matt, new THREE.BoxGeometry(0.85, 0.12, 1.95), [x, FLOOR + 0.57, 0]);
+      B.add(linen, new THREE.BoxGeometry(0.86, 0.02, 0.5), [x, FLOOR + 0.64, -0.3]).add(linen, new THREE.BoxGeometry(0.55, 0.1, 0.32), [x, FLOOR + 0.68, -0.75]);
+      B.add(frame, new THREE.BoxGeometry(0.9, 0.55, 0.05), [x, FLOOR + 0.76, -1.0]);
+      const ivx = 3.65, ivz = -1.55; // IV stand at the head end (outside the monitor's span when you face it)
+      B.add(rail, new THREE.CylinderGeometry(0.015, 0.015, 1.7, 8), [ivx, FLOOR + 0.85, ivz]).add(frame, new THREE.CylinderGeometry(0.18, 0.18, 0.03, 16), [ivx, FLOOR + 0.02, ivz]);
+      B.add(rail, new THREE.BoxGeometry(0.22, 0.02, 0.02), [ivx, FLOOR + 1.68, ivz]).add(lambert('#9fd4e0'), new THREE.BoxGeometry(0.12, 0.2, 0.04), [ivx + 0.08, FLOOR + 1.52, ivz]);
+      B.flush(g);
+    },
+    cleanWall(R, g) { // 医務室: grey-white panels on the lower half of every wall (not lit up), seams every 1.2 m, a quiet cyan cross under the memo
+      const B = batch(), panel = lambert('#9aa6b2'), seam = lambert('#7e8a96'), y = FLOOR + 0.8, h = 1.3;
+      for (let k = 0; k < 4; k++) {
+        const ry = WALL[k].rotY, at = (x, off) => { const p = WALL[k].pos(off); return [p.x + Math.cos(ry) * x, y, p.z - Math.sin(ry) * x]; };
+        const segs = k in R.doors ? [[-4.15, -1.5], [1.5, 4.15]] : [[-4.15, 4.15]];
+        for (const [a, b] of segs) {
+          B.add(panel, new THREE.BoxGeometry(b - a, h, 0.02), at((a + b) / 2, 0.015), [0, ry, 0]);
+          B.add(seam, new THREE.BoxGeometry(b - a, 0.03, 0.03), at((a + b) / 2, 0.02).map((v, i) => i === 1 ? y + h / 2 : v), [0, ry, 0]);
+          for (let sx = Math.ceil(a / 1.2) * 1.2; sx < b - 0.1; sx += 1.2) if (sx > a + 0.1) B.add(seam, new THREE.BoxGeometry(0.02, h, 0.03), at(sx, 0.02), [0, ry, 0]);
+        }
+      }
+      const cross = new THREE.MeshBasicMaterial({ color: col('#2f8fa8') }), c = WALL[2].pos(0.035), ry = WALL[2].rotY;
+      B.add(cross, new THREE.BoxGeometry(0.5, 0.12, 0.01), [c.x, -0.75, c.z], [0, ry, 0]).add(cross, new THREE.BoxGeometry(0.12, 0.5, 0.01), [c.x, -0.75, c.z], [0, ry, 0]);
+      B.flush(g);
+    },
+    bunkBed(R, g) { // 居住区: a two-tier bunk against the back wall (right of the photo, seen from inside)
+      const B = batch(), wood = lambert('#5a4632');
+      const x = -2.65, z = 4.5;
+      B.add(wood, new THREE.BoxGeometry(2.0, 0.22, 0.9), [x, FLOOR + 0.4, z]).add(wood, new THREE.BoxGeometry(2.0, 0.22, 0.9), [x, FLOOR + 1.4, z]);
+      for (const dx of [-0.97, 0.97]) for (const dz of [-0.42, 0.42]) B.add(M.propDark, new THREE.BoxGeometry(0.06, 1.9, 0.06), [x + dx, FLOOR + 0.95, z + dz]);
+      B.add(lambert('#6a3428'), new THREE.BoxGeometry(1.6, 0.08, 0.85), [x, FLOOR + 0.55, z]).add(lambert('#1d4f63'), new THREE.BoxGeometry(1.6, 0.08, 0.85), [x, FLOOR + 1.55, z]);
+      B.add(lambert('#3a2a3a'), new THREE.CircleGeometry(1.4, 32), [0, FLOOR + 0.012, 1.2], [-Math.PI / 2, 0, 0]); // a round rug: seen from every wall
+      // a small desk under the photo (back wall centre) with a mug and two books: someone lived here
+      B.add(wood, new THREE.BoxGeometry(1.6, 0.06, 0.55), [0, FLOOR + 0.75, 4.6]);
+      for (const dx of [-0.74, 0.74]) B.add(M.propDark, new THREE.BoxGeometry(0.05, 0.75, 0.5), [dx, FLOOR + 0.375, 4.6]);
+      B.add(lambert('#b5482e'), new THREE.CylinderGeometry(0.05, 0.05, 0.11, 12), [0.45, FLOOR + 0.835, 4.5]);
+      B.add(lambert('#7fb8a8'), new THREE.BoxGeometry(0.22, 0.05, 0.3), [-0.4, FLOOR + 0.805, 4.55]).add(lambert('#c9bfa8'), new THREE.BoxGeometry(0.2, 0.05, 0.28), [-0.38, FLOOR + 0.855, 4.55], [0, 0.2, 0]);
+      B.flush(g);
+    },
+    storageShelf(R, g) { // 倉庫: a shelf of crates on the left wall
+      const B = batch(), x = -4.6, z = 1.6;
+      for (const dz of [-1.05, 1.05]) for (const dx of [-0.27, 0.27]) B.add(M.propDark, new THREE.BoxGeometry(0.06, 2.4, 0.06), [x + dx, FLOOR + 1.2, z + dz]);
+      for (const y of [0.3, 1.1, 1.9]) B.add(M.propDark, new THREE.BoxGeometry(0.6, 0.04, 2.2), [x, FLOOR + y, z]);
+      const cr = [lambert('#6a7384'), lambert('#7a3a2a'), lambert('#8a6a3a')];
+      [[0.3, -0.6, 0.5, 0], [0.3, 0.2, 0.6, 1], [1.1, -0.5, 0.45, 2], [1.1, 0.45, 0.55, 0], [1.9, 0.0, 0.5, 1]].forEach(([y, dz, s, c]) => B.add(cr[c], new THREE.BoxGeometry(0.5, s, s), [x + 0.02, FLOOR + y + 0.02 + s / 2, z + dz]));
+      // a stack of crates on a pallet under the memo (front wall): kept below the memo (top <= FLOOR + 1.3)
+      B.add(lambert('#5a4632'), new THREE.BoxGeometry(1.2, 0.12, 1.0), [0.9, FLOOR + 0.06, -4.2]);
+      B.add(cr[2], new THREE.BoxGeometry(0.8, 0.6, 0.8), [0.75, FLOOR + 0.42, -4.2]).add(cr[0], new THREE.BoxGeometry(0.55, 0.45, 0.55), [1.2, FLOOR + 0.345, -3.7], [0, 0.3, 0]).add(cr[1], new THREE.BoxGeometry(0.5, 0.4, 0.5), [0.8, FLOOR + 0.92, -4.2], [0, -0.2, 0]);
+      B.add(lambert('#c9922f'), new THREE.BoxGeometry(0.82, 0.05, 0.82), [0.75, FLOOR + 0.5, -4.2]);
+      B.flush(g);
+    },
     // a handwritten note on masking tape: someone was here (environmental storytelling)
     tapeNote(R, g) {
       const w = onWall(2, 0.05); w.position.y = 0.72; g.add(w);
@@ -399,6 +485,6 @@ export function createLook(THREE, theme, E) {
   }
   const SND = theme.sound || null;
   const sfx = (name, o) => { if (SND) SND.play(name, o); };
-  return { showSea, renderer, render, resize, setBloom, hasBloom: () => !!composer, buildShell, buildDoor, dialStyle, drawLabelFrame, labelFont, mapCol, setTint, update, enterRoom, theme, sfx,
+  return { halo: (parent, pos, size, color, opacity) => { const sp = halo(parent, pos, size, color, opacity); halos.pop(); return sp; }, showSea, renderer, render, resize, setBloom, hasBloom: () => !!composer, buildShell, buildDoor, dialStyle, drawLabelFrame, labelFont, mapCol, setTint, update, enterRoom, theme, sfx,
     audio: ctx => SND && SND.unlock(ctx), loop: (name, on, vol) => SND && SND.loop(name, on, vol), pause: p => SND && SND.pause(p), duck: on => SND && SND.duck(on), setVolume: v => SND && SND.setVolume(v), beep: ms => SND && SND.beep(ms), setAmbience: on => SND && SND.setAmbience(on), hasSound: !!SND };
 }

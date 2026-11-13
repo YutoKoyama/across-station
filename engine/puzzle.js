@@ -2,8 +2,8 @@
 // 1 冷却：A/Bのバルブ（手がかりは相手側の部屋） → 2 通信：振動の暗号をダイヤルで入力 → 3 逆噴射：方位を向いて3秒 → 4 脱出
 // The order of gimmicks comes from the pack ("steps": [...]); phase n = steps[n - 1], then the ending.
 import * as THREE from '../vendor/three.module.js';
-import { FLOOR, CEIL, onWall } from './world.js?v=202611130129';
-import { seedRng, rand, shuffle, pick } from './rng.js?v=202611130129';
+import { FLOOR, CEIL, onWall } from './world.js?v=202611130320';
+import { seedRng, rand, shuffle, pick } from './rng.js?v=202611130320';
 
 export const SYMBOLS = ['○', '△', '□', '☆'];
 // vibration code: told apart by length and order only (spec 7). トン = short, ツー = long
@@ -21,7 +21,7 @@ export function installPuzzle(G) {
     const kind = opts.kind || 'valve';
     const R = roomById[roomId];
     const base = onWall(wall, 0.05); R.group.add(base); // dial centre at eye height (y = 0)
-    const holder = new THREE.Group(); holder.position.x = xOff; base.add(holder);
+    const holder = new THREE.Group(); holder.position.x = xOff; if (opts.scale) holder.scale.setScalar(opts.scale); base.add(holder);
     const DS = LOOK.dialStyle(kind); // a circle on a square back plate, theme colours
     const back = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3), DS.back); back.position.z = -0.01; holder.add(back);
     const plate = new THREE.Mesh(new THREE.CircleGeometry(1.0, 40), DS.plate); holder.add(plate);
@@ -120,9 +120,9 @@ export function installPuzzle(G) {
     G.resetAim();
     G.showPlayer('A', false);
   }
-  function setPhase(n) {
+  function setPhase(n, jump = false) { // jump: set the phase directly (rejoining an online game, online.js)
     const puzzle = G.puzzle;
-    if (n !== 1 && n <= puzzle.phase) return;
+    if (!jump && n !== 1 && n <= puzzle.phase) return;
     puzzle.phase = n;
     const step = stepAt(n), comm = puzzle.things.comm;
     const item = setPanel(comm,
@@ -130,6 +130,7 @@ export function installPuzzle(G) {
     item.type = 'comm';
     for (const v of valves) v.locked = step !== v.step;
     $('goal').textContent = T.goals[step] || '';
+    if (G.onPhase) G.onPhase(step); // e.g. the greenhouse skylight opens after the plants step
     if (n > 1) G.cue(step === 'end' ? 'end' : 'step:' + step);
     G.updateStatus();
   }

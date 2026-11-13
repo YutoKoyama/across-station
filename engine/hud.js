@@ -33,7 +33,7 @@ export function installHud(G) {
   function partnerLine() {
     const ps = G.partnerStamp;
     if (ps && performance.now() < ps.until) return `${G.NET.role === 'A' ? 'B' : 'A'}：「${ps.text}」`;
-    const o = G.cur === 'A' ? 'B' : 'A', p = players[o], room = roomById[p.room].name;
+    const o = G.cur === 'A' ? 'B' : 'A', p = players[o], room = (roomById[p.room] || {}).name || '';
     if (!G.puzzle) return '';
     const P = T.partner, st = k => players[k].thrust ? P.thrustDone : players[k].thrustT > 0 || players[k].holding ? P.thrustHolding : P.thrustWaiting;
     if (G.isStep('crossValves')) return fmt(p.result ? P.valveDone : P.valveNotYet, { o, room });
@@ -52,8 +52,13 @@ export function installHud(G) {
     const m = k => G.puzzle && G.reached('thrust') ? (players[k].thrust ? '◆' : '…') : s(players[k].result);
     $('btnPlayer').textContent = `${G.cur}⇄${G.cur === 'A' ? 'B' : 'A'}`;
     $('btnPlayer').title = `A${m('A')} B${m('B')}`;
-    $('who').textContent = fmt(UI.youAre || '{role}', { role: ROLE[G.cur] });
+    updateWho();
     updateMap(); updatePartner(); updateTodo();
+  }
+  // the band: your role (fixed) + the room you are in now (review 1 S1 / visual review M4: updated on every room change)
+  function updateWho() {
+    const me = players[G.cur], R = me && roomById[me.room];
+    $('who').textContent = fmt(UI.youAre || '{role}', { role: ROLE[G.cur], room: R ? R.name : '' }); measureTop();
   }
   // gentle notices (not blocking the game)
   let noticeTimer = null;
@@ -61,7 +66,7 @@ export function installHud(G) {
     $('noticeText').textContent = G.clean(text); $('notice').style.display = 'block';
     clearTimeout(noticeTimer); if (autoHide) noticeTimer = setTimeout(() => { $('notice').style.display = 'none'; }, NOTICE_AUTO_HIDE_MS);
   }
-  Object.assign(G, { updateMap, updatePartner, updateStatus, updateTodo, notice });
+  Object.assign(G, { updateMap, updatePartner, updateStatus, updateTodo, updateWho, notice });
 
   // ---------- buttons and screens ----------
   { // art guide: own line icons instead of emoji (stroke 1.75, square caps)
@@ -101,7 +106,7 @@ export function installHud(G) {
   $('btnPlayer').onclick = () => G.showPlayer(G.cur === 'A' ? 'B' : 'A');
   $('btnSettings').onclick = () => { $('settings').style.display = 'flex'; };
   $('btnSettingsClose').onclick = () => { $('settings').style.display = 'none'; };
-  $('btnPause').onclick = () => { G.paused = true; G.hq.length = 0; G.codePlaying = false; if (G.SOUND()) LOOK.duck(false); $('pause').style.display = 'flex'; LOOK.pause(true); LOOK.loop('thrust', false); };
+  $('btnPause').onclick = () => { G.paused = true; if (G.stopGaze) G.stopGaze(); G.hq.length = 0; G.codePlaying = false; if (G.SOUND()) LOOK.duck(false); $('pause').style.display = 'flex'; LOOK.pause(true); LOOK.loop('thrust', false); };
   $('btnResume').onclick = () => { G.paused = false; $('pause').style.display = 'none'; LOOK.pause(false); G.sfx('ui', { vol: 0.5 }); };
   $('btnAgain').onclick = () => { $('done').style.display = 'none'; G.newPuzzle(); };
   $('fov').oninput = e => { G.baseFov = +e.target.value; camera.fov = +e.target.value; camera.updateProjectionMatrix(); $('fovVal').textContent = e.target.value + '°'; };
@@ -128,6 +133,7 @@ export function installHud(G) {
   $('stampMenu').onclick = e => { const i = e.target.dataset && e.target.dataset.i; if (i !== undefined) G.sendStamp(STAGE.stamps[+i]); };
   // leaving the app (home button / another app): silence the station hum; coming back: sound again
   if (document.addEventListener) document.addEventListener('visibilitychange', () => {
+    if (document.hidden && G.stopGaze) G.stopGaze(); // behind another app: not looking out of the window any more (review 1 S7)
     if (!G.audioCtx) return;
     try { if (document.hidden) G.audioCtx.suspend(); else G.audioCtx.resume(); } catch (e) {}
   });

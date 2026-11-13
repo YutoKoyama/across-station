@@ -1,8 +1,8 @@
 // ---------- test hooks (used only by tools/device_test.mjs over the WebView debug connection) ----------
 // Nothing here runs in normal play: every function except enable() refuses to work until enable() is called,
-// and enable() can only be called from the debugger (debug builds), never from the game UI.
+// enable() is not reachable from the game UI (but anyone can call it from a console: the published build has no hooks at all).
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611130129';
+import { faceYaw } from './world.js?v=202611130320';
 
 export function installTestHooks(G) {
   const { $, players, valves, interactive, renderer, hemi, DIR_NAME } = G;
@@ -51,7 +51,7 @@ export function installTestHooks(G) {
     focus(name) { need(); G.enterFocus(thing(name)); return !!G.focus; },
     unfocus() { need(); G.exitFocus(); return true; },
     disable() { G.testMode = false; const b = document.getElementById('testBadge'); if (b) b.remove(); G.recenterPending = true; return true; },
-    state() {
+    state() { need(); // the state holds the answers: only after enable() (review 2)
       const puzzle = G.puzzle, NET = G.NET, aimed = G.aimed;
       return { look: G.THEME.id, sound: G.THEME.sound ? G.THEME.sound.stats() : null, settings: G.settings ? { ...G.settings } : null,
         testMode: G.testMode, cur: G.cur, phase: puzzle.phase, step: G.stepNow(), cues: G.cueLog.slice(-10), light: '#' + hemi.color.getHexString(), done: $('done').style.display === 'flex', paused: G.paused, fps: $('fps').textContent, ratio: renderer.getPixelRatio(),
