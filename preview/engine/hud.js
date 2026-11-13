@@ -19,7 +19,8 @@ export function installHud(G) {
       return fmt(TD.codeHeard, { cmd, tbl });
     }
     if (G.isStep('thrust')) return me.thrust ? TD.thrustDone : here !== me.start ? fmt(TD.thrustGo, { cmd, home }) : TD.thrustAt;
-    return TD.end || '';
+    if (G.isStep('end')) return TD.end || '';
+    return TD[G.stepNow()] || ''; // wing steps: one line each from the pack
   }
   G.shownTodo = null;
   function updateTodo() { const t = todoLine() || ''; if (t === G.shownTodo) return; G.shownTodo = t; $('todo').textContent = t; measureTop(); }
@@ -38,7 +39,8 @@ export function installHud(G) {
     if (G.isStep('crossValves')) return fmt(p.result ? P.valveDone : P.valveNotYet, { o, room });
     if (G.isStep('vibrationCode')) return fmt(P.inRoom, { o, room }) + (G.puzzle.codePlayed ? P.codeHeard : '');
     if (G.isStep('thrust')) return fmt(P.thrust, { a: st('A'), b: st('B') });
-    return P.end;
+    if (G.isStep('end')) return P.end;
+    return fmt(P.inRoom, { o, room });
   }
   G.shownPartner = null;
   function updatePartner() {

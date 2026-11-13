@@ -2,7 +2,7 @@
 // Nothing here runs in normal play: every function except enable() refuses to work until enable() is called,
 // and enable() can only be called from the debugger (debug builds), never from the game UI.
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121605';
+import { faceYaw } from './world.js';
 
 export function installTestHooks(G) {
   const { $, players, valves, interactive, renderer, hemi, DIR_NAME } = G;
@@ -40,6 +40,14 @@ export function installTestHooks(G) {
     enable() { G.testMode = true; if (G.hideGuide) G.hideGuide(); const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = 'テストモード';
       b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:4px;background:#b45309;color:#fff;font-size:11px;padding:2px 8px;border-radius:8px;z-index:50';
       document.body.appendChild(b); return true; },
+    wings: {
+      info() { need(); const p = G.puzzle; return { step: G.stepNow(), plantDir: p.plantDir, skyAnswer: p.things.skyDial && p.things.skyDial.answer, bpm: p.bpm,
+        rightLocker: (p.lockers || []).findIndex(l => l.right), doorOpen: G.interactive.filter(i => i.type === 'door').map(d => [d.room, d.to, G.doorOpen(d)]) }; },
+      finishOne() { need(); const st = G.stepNow();
+        if (st === 'plants') { const d = G.puzzle.things.skyDial; G.setValveIdx(d, d.symbols.indexOf(d.answer)); G.applyJudge(d, true, true); G.netSend({ t: 'judge', i: G.valves.indexOf(d), idx: d.idx, ok: true }); }
+        else if (['heartbeat', 'photo', 'finale'].includes(st)) G.finishStep(st);
+        return G.stepNow(); },
+    },
     focus(name) { need(); G.enterFocus(thing(name)); return !!G.focus; },
     unfocus() { need(); G.exitFocus(); return true; },
     disable() { G.testMode = false; const b = document.getElementById('testBadge'); if (b) b.remove(); G.recenterPending = true; return true; },

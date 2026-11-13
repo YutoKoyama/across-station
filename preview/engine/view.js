@@ -1,7 +1,7 @@
 // ---------- view: phone orientation -> camera, touch look, tapping doors, moving between rooms ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121605';
-import { sleep } from './feedback.js?v=202611121605';
+import { faceYaw } from './world.js';
+import { sleep } from './feedback.js';
 
 export function installView(G) {
   const { $, camera, renderer, ROOMS, roomById, players } = G;
@@ -76,6 +76,7 @@ export function installView(G) {
     const thrustHeld = G.puzzle && G.isStep('thrust') && players[G.cur].thrustT > 0;
     const tap = down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 12 && performance.now() - down.t < 500;
     if (!thrustHeld && tap && !G.focus && aimed && aimed.type === 'door') { if (G.doorOpen(aimed)) goThrough(aimed.to); else { G.sfx('thud', { vol: 0.5 }); G.haptic('wrong'); } }
+    else if (tap && aimed && aimed.type === 'pad' && G.padTap) G.padTap();
     else if (tap && !G.focus && aimed && aimed.type === 'valve' && !aimed.valve.locked && G.focusRequired()) G.enterFocus(aimed.valve);
     down = null; lastXY = null; });
 

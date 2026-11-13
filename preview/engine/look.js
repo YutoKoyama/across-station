@@ -9,7 +9,7 @@ import { mergeGeometries } from '../vendor/addons/utils/BufferGeometryUtils.js';
 
 export async function loadTheme(THREE, id) {
   const base = `themes/${id}/`;
-  const r = await fetch(base + 'theme.json?v=202611121605');
+  const r = await fetch(base + 'theme.json');
   if (!r.ok) throw new Error('theme not found: ' + id);
   const theme = await r.json();
   const loader = new THREE.TextureLoader();
@@ -30,7 +30,7 @@ export async function loadTheme(THREE, id) {
     }));
   }
   // sound set (CC0 Kenney audio + synthesis) - engine/sound.js decodes the files once audio is unlocked by a tap
-  if (theme.sfx) { const S = await import('./sound.js?v=202611121605'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
+  if (theme.sfx) { const S = await import('./sound.js'); theme.sound = await S.createSound(base, theme.sfx, theme.ambience || {}); }
   if (theme.css && ![...document.querySelectorAll('link[rel=stylesheet]')].some(x => (x.getAttribute('href') || '').split('?')[0] === base + theme.css)) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = base + theme.css; document.head.appendChild(l); }
   return theme;
 }
@@ -88,6 +88,17 @@ export function createLook(THREE, theme, E) {
   // window views share one texture (rotates slowly = the station is spinning)
   const windowTex = theme.tex.window; windowTex.center.set(0.5, 0.5);
   const lights = [];
+  const views = []; let seaTex = null;
+  // the ending: the porthole shows the sea at sunrise (drawn once on a canvas)
+  function makeSea() {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 512; const g = c.getContext('2d');
+    const sky = g.createLinearGradient(0, 0, 0, 300); sky.addColorStop(0, '#0d1838'); sky.addColorStop(0.55, '#6b4a6a'); sky.addColorStop(1, '#ffc27a'); g.fillStyle = sky; g.fillRect(0, 0, 512, 300);
+    const sun = g.createRadialGradient(256, 300, 4, 256, 300, 120); sun.addColorStop(0, 'rgba(255,248,220,1)'); sun.addColorStop(1, 'rgba(255,180,90,0)'); g.fillStyle = sun; g.fillRect(0, 160, 512, 160);
+    const sea = g.createLinearGradient(0, 300, 0, 512); sea.addColorStop(0, '#2f7fb8'); sea.addColorStop(1, '#08223f'); g.fillStyle = sea; g.fillRect(0, 300, 512, 212);
+    g.strokeStyle = 'rgba(255,215,150,0.75)'; g.lineWidth = 3; for (let i = 0; i < 6; i++) { const w = 160 - i * 22; g.beginPath(); g.moveTo(256 - w, 318 + i * 16); g.lineTo(256 + w, 318 + i * 16); g.stroke(); }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+  function showSea(on) { try { if (on && !seaTex) seaTex = makeSea(); } catch (e) { return; } for (const v of views) { v.material.map = on ? seaTex : windowTex; v.material.needsUpdate = true; } }
   const tintNow = new THREE.Color(1, 1, 1);
 
   // ---- post effects (2026-11-13, "Canva look"): light bleed (bloom) on the neon parts ----
@@ -160,7 +171,7 @@ export function createLook(THREE, theme, E) {
     const wx = winWall === 2 ? 2.9 : -2.5;
     const WR = theme.neon ? 1.2 : 0.78; // porthole radius
     const frame = new THREE.Mesh(new THREE.BoxGeometry(WR * 2.55, WR * 2.55, 0.08), M.structure); frame.position.set(wx, 0, 0.0); wg.add(frame);
-    const view = new THREE.Mesh(new THREE.CircleGeometry(WR, 48), new THREE.MeshBasicMaterial({ map: windowTex, fog: false })); view.position.set(wx, 0, 0.05); wg.add(view);
+    const view = new THREE.Mesh(new THREE.CircleGeometry(WR, 48), new THREE.MeshBasicMaterial({ map: windowTex, fog: false })); views.push(view); view.position.set(wx, 0, 0.05); wg.add(view);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(WR + 0.03, theme.neon ? 0.035 : 0.06, 6, 48), theme.neon ? M.neonCyan : M.doorFrame); rim.position.set(wx, 0, 0.06); wg.add(rim);
     halo(wg, new THREE.Vector3(wx, 0, 0.2), 2.4, '#4f7bd6', 0.18);
     // pipes along the ceiling edges
@@ -387,6 +398,6 @@ export function createLook(THREE, theme, E) {
   }
   const SND = theme.sound || null;
   const sfx = (name, o) => { if (SND) SND.play(name, o); };
-  return { renderer, render, resize, setBloom, hasBloom: () => !!composer, buildShell, buildDoor, dialStyle, drawLabelFrame, labelFont, mapCol, setTint, update, enterRoom, theme, sfx,
+  return { showSea, renderer, render, resize, setBloom, hasBloom: () => !!composer, buildShell, buildDoor, dialStyle, drawLabelFrame, labelFont, mapCol, setTint, update, enterRoom, theme, sfx,
     audio: ctx => SND && SND.unlock(ctx), loop: (name, on, vol) => SND && SND.loop(name, on, vol), pause: p => SND && SND.pause(p), duck: on => SND && SND.duck(on), setVolume: v => SND && SND.setVolume(v), beep: ms => SND && SND.beep(ms), setAmbience: on => SND && SND.setAmbience(on), hasSound: !!SND };
 }

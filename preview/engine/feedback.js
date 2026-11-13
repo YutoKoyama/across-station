@@ -48,6 +48,7 @@ export function installFeedback(G) {
     notice: a => G.notice(a.text || '', a.autoHide !== false),
     story: () => { const t = G.T.story[G.stepNow()]; if (t) G.notice(t, true); },
     ending: () => { $('done').style.display = 'flex'; },
+    sea: () => { if (G.LOOK.showSea) G.LOOK.showSea(true); },
   };
   const cueLog = [];
   function cue(name) {

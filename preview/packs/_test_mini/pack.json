@@ -1,0 +1,132 @@
+{
+  "_comment": "TEST PACK for tools/sim_pack_test.mjs: same stage, but the gimmick order skips the vibration code. Proves steps come from the pack.",
+  "id": "_test_mini",
+  "title": "テスト用ミニパック",
+  "intro": {
+    "story": "観測ステーション「しずく」に、小さな隕石のかけらが当たった。姿勢を保つ噴射口が壊れ、ステーションはゆっくり回り始めている。整備係のAは格納庫に、技術係のBは発電室に取り残された。冷却を戻し、通信を開き、逆噴射で回転を止めて脱出しよう。",
+    "howto": "スマホは、ステーションをのぞく小窓です。体ごとゆっくり回って見回してください。扉に照準を合わせてタップすると隣の部屋へ。黄色い★の帯の壁が「前方」です。気分が悪くなったら休んでください。"
+  },
+  "ending": {
+    "title": "🚀 脱出成功！",
+    "text": "観測ステーション「しずく」の回転は止まった。2人は格納庫の小型艇で、静かになった星の海へ出発した。"
+  },
+  "directions": [
+    "前方",
+    "右舷",
+    "後方",
+    "左舷"
+  ],
+  "rooms": [
+    {
+      "id": "hangar",
+      "name": "格納庫",
+      "col": 0,
+      "color": "#1e3a5f",
+      "lever": true
+    },
+    {
+      "id": "command",
+      "name": "司令室",
+      "col": 1,
+      "color": "#2b2f55",
+      "lever": false
+    },
+    {
+      "id": "power",
+      "name": "発電室",
+      "col": 2,
+      "color": "#4a2f1e",
+      "lever": true
+    }
+  ],
+  "roles": {
+    "A": {
+      "label": "A・整備係（格納庫）",
+      "start": "hangar"
+    },
+    "B": {
+      "label": "B・技術係（発電室）",
+      "start": "power"
+    }
+  },
+  "placement": {
+    "clueRoom": {
+      "A": "power",
+      "B": "command"
+    },
+    "clueOnCeiling": {
+      "A": false,
+      "B": true
+    },
+    "codeTableRoom": "hangar",
+    "commRoom": "command",
+    "commWall": 2,
+    "dialWall": 0
+  },
+  "text": {
+    "goals": {
+      "crossValves": "冷却バルブを合わせる",
+      "vibrationCode": "暗号を受信して通信ダイヤルを合わせる",
+      "thrust": "持ち場で、知らされた方位へ噴射",
+      "end": "脱出成功！"
+    },
+    "story": {
+      "vibrationCode": "冷却が戻り、司令室に電気が来た。通信パネルが暗号を受け取っている。振動で届く暗号を、格納庫の「暗号表」で読み解こう。",
+      "thrust": "通信がつながった。管制から逆噴射の方位が届いた。2人とも自分の持ち場で、その方位を向いて噴射レバーを3秒引こう。"
+    },
+    "valveTitle": "冷却バルブ",
+    "dialTitle": "通信ダイヤル{n}",
+    "clue": "{role}へ\n{dir}の壁の冷却バルブを\n「{sym}」に合わせる",
+    "codeTable": "通信暗号表\n○ トン・トン　△ トン・ツー\n□ ツー・トン　☆ ツー・ツー\n（トン＝短い　ツー＝長い）",
+    "commOff": "通信パネル\n（電源が切れている）",
+    "commReady": "通信パネル\n暗号を受信中…\n照準を合わせて1.5秒で再生",
+    "commReceiving": "受信中 {dots}\n振動に集中して",
+    "commReceived": "通信パネル\n受信完了（もう一度：1.5秒見つめる）",
+    "commThrust": "管制より：逆噴射の方位は\n【{dir}】",
+    "partner": {
+      "valveDone": "{o}：冷却バルブ完了",
+      "valveNotYet": "{o}：{room}にいる（冷却バルブはまだ）",
+      "inRoom": "{o}：{room}にいる",
+      "codeHeard": "・暗号は受信済み",
+      "thrust": "A {a} ／ B {b}",
+      "thrustDone": "噴射完了",
+      "thrustWaiting": "待機中",
+      "thrustHolding": "噴射中",
+      "end": "回転停止。脱出成功！"
+    },
+    "thrustOkOne": "{me}の逆噴射OK！ もう1人も持ち場で噴射しよう。",
+    "thrustWaitPartner": "相手の噴射を待っています",
+    "thrustHint": "知らされた方位を向いて3秒",
+    "thrustAim": "噴射の方位を向く",
+    "thrustOn": "{dir}へ噴射中"
+  },
+  "stamps": [
+    "そっち何が見える？",
+    "★の帯はどっち？",
+    "暗号きたよ",
+    "トン・ツー…",
+    "せーので噴射！",
+    "OK！"
+  ],
+  "packFormat": 1,
+  "steps": [
+    "crossValves",
+    "thrust"
+  ],
+  "cues": {
+    "step:thrust": [
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#ff0000",
+        "ms": 0
+      }
+    ],
+    "end": [
+      {
+        "at": 0,
+        "do": "ending"
+      }
+    ]
+  }
+}
