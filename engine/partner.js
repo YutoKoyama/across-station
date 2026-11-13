@@ -4,7 +4,7 @@
 // seen through the walls it stood in front of clues and memos); where they are is shown on the map. Online, 'look' messages bring their direction;
 // the figure turns smoothly toward it. On one phone (A⇄B switch) the other crew member keeps their last direction.
 import * as THREE from '../vendor/three.module.js';
-import { HW, FLOOR } from './world.js?v=202611130320';
+import { HW, FLOOR } from './world.js?v=202611130500';
 
 const COL = 0x7fb8a8, /* celadon = the map's partner colour (amber is "you" / "operate") */ ROOM_PITCH = HW * 2 + 1, SIDE = 2.4, TURN_RATE = 10, MOVE_RATE = 6;
 // review 2 S1: a light "hologram bust" instead of a solid snowman, 2.4 m to the side, and it fades when it is right in front of you

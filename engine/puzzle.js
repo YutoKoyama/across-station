@@ -2,8 +2,8 @@
 // 1 冷却：A/Bのバルブ（手がかりは相手側の部屋） → 2 通信：振動の暗号をダイヤルで入力 → 3 逆噴射：方位を向いて3秒 → 4 脱出
 // The order of gimmicks comes from the pack ("steps": [...]); phase n = steps[n - 1], then the ending.
 import * as THREE from '../vendor/three.module.js';
-import { FLOOR, CEIL, onWall } from './world.js?v=202611130320';
-import { seedRng, rand, shuffle, pick } from './rng.js?v=202611130320';
+import { FLOOR, CEIL, onWall } from './world.js?v=202611130500';
+import { seedRng, rand, shuffle, pick } from './rng.js?v=202611130500';
 
 export const SYMBOLS = ['○', '△', '□', '☆'];
 // vibration code: told apart by length and order only (spec 7). トン = short, ツー = long

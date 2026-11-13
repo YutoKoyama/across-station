@@ -2,7 +2,7 @@
 // Nothing here runs in normal play: every function except enable() refuses to work until enable() is called,
 // enable() is not reachable from the game UI (but anyone can call it from a console: the published build has no hooks at all).
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611130320';
+import { faceYaw } from './world.js?v=202611130500';
 
 export function installTestHooks(G) {
   const { $, players, valves, interactive, renderer, hemi, DIR_NAME } = G;

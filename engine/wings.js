@@ -4,10 +4,10 @@
 // "答えは相手の側": the leaves are in the A wing, the skylight dial in the B wing; the heartbeat is felt in the B wing,
 // tapped in the A wing; the photo is in the B wing, the lockers in the A wing. The finale needs both in one room.
 import * as THREE from '../vendor/three.module.js';
-import { FLOOR, CEIL, onWall, faceYaw } from './world.js?v=202611130320';
+import { FLOOR, CEIL, onWall, faceYaw } from './world.js?v=202611130500';
 import { mergeGeometries } from '../vendor/addons/utils/BufferGeometryUtils.js';
-import { rand, shuffle, pick } from './rng.js?v=202611130320';
-import { SYMBOLS } from './puzzle.js?v=202611130320';
+import { rand, shuffle, pick } from './rng.js?v=202611130500';
+import { SYMBOLS } from './puzzle.js?v=202611130500';
 
 const HOLD_SEC = 1.5, GAZE_SEC = 3, PAD_TAPS = 5, PAD_TOL = 0.16, PAD_EACH_TOL = 0.3;
 const BPM = [54, 72, 96];

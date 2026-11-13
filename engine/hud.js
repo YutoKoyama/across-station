@@ -25,7 +25,9 @@ export function installHud(G) {
   G.shownTodo = null;
   function updateTodo() { const t = todoLine() || ''; if (t === G.shownTodo) return; G.shownTodo = t; $('todo').textContent = t; measureTop(); }
   // the band's height changes with the text: keys and notices below it follow (CSS var --topH)
-  function measureTop() { try { const h = $('top').offsetHeight; if (h) document.documentElement.style.setProperty('--topH', h + 'px'); } catch (e) {} }
+  // --bandH = the band itself; --topH = the band + the "相手が抜けました" strip under it when shown (online.js), so the map and keys move down
+  function measureTop() { try { const h = $('top').offsetHeight; if (!h) return; const nb = document.getElementById('netBanner'), extra = nb && nb.style.display !== 'none' ? nb.offsetHeight + 6 : 0;
+    document.documentElement.style.setProperty('--bandH', h + 'px'); document.documentElement.style.setProperty('--topH', (h + extra) + 'px'); } catch (e) {} }
   if (typeof addEventListener === 'function') addEventListener('resize', () => setTimeout(measureTop, 50));
   const ROLE = Object.fromEntries(Object.entries(STAGE.roles).map(([k, r]) => [k, r.label]));
   // partner bubble: shows what the OTHER crew member is doing (their state only; never the answer).
@@ -106,7 +108,7 @@ export function installHud(G) {
   $('btnPlayer').onclick = () => G.showPlayer(G.cur === 'A' ? 'B' : 'A');
   $('btnSettings').onclick = () => { $('settings').style.display = 'flex'; };
   $('btnSettingsClose').onclick = () => { $('settings').style.display = 'none'; };
-  $('btnPause').onclick = () => { G.paused = true; if (G.stopGaze) G.stopGaze(); G.hq.length = 0; G.codePlaying = false; if (G.SOUND()) LOOK.duck(false); $('pause').style.display = 'flex'; LOOK.pause(true); LOOK.loop('thrust', false); };
+  $('btnPause').onclick = () => { if (G.showLeaveRoom) G.showLeaveRoom(!!(G.NET && G.NET.started)); G.paused = true; if (G.stopGaze) G.stopGaze(); G.hq.length = 0; G.codePlaying = false; if (G.SOUND()) LOOK.duck(false); $('pause').style.display = 'flex'; LOOK.pause(true); LOOK.loop('thrust', false); };
   $('btnResume').onclick = () => { G.paused = false; $('pause').style.display = 'none'; LOOK.pause(false); G.sfx('ui', { vol: 0.5 }); };
   $('btnAgain').onclick = () => { $('done').style.display = 'none'; G.newPuzzle(); };
   $('fov').oninput = e => { G.baseFov = +e.target.value; camera.fov = +e.target.value; camera.updateProjectionMatrix(); $('fovVal').textContent = e.target.value + '°'; };
@@ -126,8 +128,28 @@ export function installHud(G) {
   }
   G.startGame = startGame;
   if (G.publicWeb) { const a = document.querySelector && document.querySelector('a[href="sensor-test.html"]'); if (a) a.style.display = 'none'; }
-  $('btnHost').onclick = () => { unlockByTap(); G.netCreate().catch(() => { $('onlineMsg').textContent = G.NET.mode === 'peer' ? UI.onlineNoBroker : UI.onlineRelayDown; }); };
-  $('btnJoin').onclick = () => { unlockByTap(); const c = $('joinCode').value.trim(); if (!/^\d{4}$/.test(c)) { $('onlineMsg').textContent = UI.onlineNeedCode; return; } G.netJoin(c); };
+  // back to the room this phone was in (saved for 2 hours): one big button on the title screen, no code to type
+  G.unlockByTap = unlockByTap; G.measureTop = measureTop;
+  { const rec = G.savedRoom && G.savedRoom(), box = $('onlineBox');
+    if (rec && box && box.insertBefore) {
+      const b = document.createElement('button'); b.id = 'btnRejoin'; b.textContent = fmt(UI.rejoinButton || '前の部屋に戻る（ルームコード {code}）', { code: rec.code });
+      b.style.cssText = 'font-size:17px;font-weight:700;padding:10px 14px;border:0;background:#F2A23A;color:#10141F;width:100%;white-space:pre-line;line-height:1.35';
+      const note = document.createElement('div'); note.id = 'rejoinNote'; note.style.cssText = 'font-size:12px;opacity:.85'; note.textContent = fmt(UI.rejoinNote || '', { role: ROLE[rec.role] || rec.role });
+      box.insertBefore(note, box.firstChild); box.insertBefore(b, box.firstChild);
+      const others = ['btnHost', 'btnJoin', 'btnStart'].map(id => $(id)).filter(Boolean), lock = on => { b.disabled = on; for (const o of others) o.disabled = on; };
+      // pressed again after a failure = try again (review 4 M2); the other lobby buttons wait while it is reconnecting
+      b.onclick = async () => { unlockByTap(); lock(true); let ok = false; try { ok = await G.netRejoin(rec); } catch (e) { ok = false; } b.disabled = false; if (!ok) lock(false); };
+      G.onRejoinFailed = () => lock(false);
+      G.onRoomGone = () => { lock(false); b.style.display = 'none'; note.style.display = 'none'; };
+    } }
+  // pause screen: leave the online room on purpose (the room is forgotten, the partner is told)
+  { const pz = $('pause'), b = document.createElement('button'); b.id = 'btnLeaveRoom'; b.textContent = UI.leaveRoom || '部屋を出る';
+    b.style.cssText = 'font-size:14px;padding:8px 16px;background:transparent;border:1px solid #6b7282;color:#c9cfdb;display:none';
+    if (pz && pz.appendChild) pz.appendChild(b);
+    b.onclick = () => { if (confirm(UI.leaveRoomConfirm || '部屋を出ますか？')) G.leaveRoom(); };
+    G.showLeaveRoom = on => { b.style.display = on ? '' : 'none'; }; }
+  $('btnHost').onclick = () => { unlockByTap(); const b = $('btnHost'); if (b.disabled) return; b.disabled = true; G.netCreate().catch(() => { b.disabled = false; $('onlineMsg').textContent = G.NET.mode === 'peer' ? UI.onlineNoBroker : UI.onlineRelayDown; }); };
+  $('btnJoin').onclick = () => { unlockByTap(); const c = $('joinCode').value.trim(); if (!/^\d{4}$/.test(c)) { $('onlineMsg').textContent = UI.onlineNeedCode; return; } const b = $('btnJoin'); if (b.disabled) return; b.disabled = true; Promise.resolve(G.netJoin(c)).then(ok => { if (!ok) b.disabled = false; }, () => { b.disabled = false; }); };
   $('btnStamp').onclick = () => { const m = $('stampMenu'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; };
   $('stampMenu').innerHTML = STAGE.stamps.map((t, i) => `<button data-i="${i}">${t}</button>`).join('');
   $('stampMenu').onclick = e => { const i = e.target.dataset && e.target.dataset.i; if (i !== undefined) G.sendStamp(STAGE.stamps[+i]); };
