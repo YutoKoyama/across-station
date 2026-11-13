@@ -4,9 +4,9 @@
 // "答えは相手の側": the leaves are in the A wing, the skylight dial in the B wing; the heartbeat is felt in the B wing,
 // tapped in the A wing; the photo is in the B wing, the lockers in the A wing. The finale needs both in one room.
 import * as THREE from '../vendor/three.module.js';
-import { FLOOR, CEIL, onWall, faceYaw } from './world.js';
-import { rand, shuffle, pick } from './rng.js';
-import { SYMBOLS } from './puzzle.js';
+import { FLOOR, CEIL, onWall, faceYaw } from './world.js?v=202611130129';
+import { rand, shuffle, pick } from './rng.js?v=202611130129';
+import { SYMBOLS } from './puzzle.js?v=202611130129';
 
 const HOLD_SEC = 1.5, GAZE_SEC = 3, PAD_TAPS = 5, PAD_TOL = 0.16, PAD_EACH_TOL = 0.3;
 const BPM = [54, 72, 96];
@@ -63,7 +63,7 @@ export function installWings(G) {
     // finale: the porthole of the finale room is the thing to look at (an invisible target over it)
     const R = roomById[W.finale.room], ww = R.winWall ?? 3, wg = onWall(ww, 0.12); wg.position.y = 2.0; R.group.add(wg); extra.push(wg);
     const target = new THREE.Mesh(new THREE.CircleGeometry(1.35, 24), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-    target.position.x = ww === 2 ? 2.9 : -2.5; wg.add(target); target.userData.root = wg;
+    target.position.x = R.winX ?? -2.5; wg.add(target); target.userData.root = wg;
     interactive.push({ mesh: target, room: R.id, type: 'gaze', puzzleItem: true, text: '' });
     puzzle.things = Object.assign(puzzle.things, { skyDial: dial, heartMon: monItem, pad: padItem });
     for (const k of ['A', 'B']) { players[k].gazeT = 0; players[k].gazing = false; }

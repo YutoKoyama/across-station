@@ -1,6 +1,6 @@
 // ---------- aiming + dial turning (phone roll like a steering wheel) + the thrust ----------
 import * as THREE from '../vendor/three.module.js';
-import { faceYaw } from './world.js?v=202611121605';
+import { faceYaw } from './world.js?v=202611130129';
 
 export const HOLD_SEC = 1.5;
 const THRUST_SEC = 3, THRUST_YAW_TOL = 25, THRUST_PITCH_TOL = 35;
@@ -73,6 +73,11 @@ export function installAim(G) {
       if (!v.locked) return canTurn(v) ? fmt(UI.hintTurn, { sym: v.symbols[v.idx] }) : (UI.hintTapDial || 'タップでバルブを持つ');
       return v.kind === 'code' && !G.reached('vibrationCode') ? UI.hintNoPower : UI.hintLocked;
     }
+    const WT = T.wings || {};
+    if (item.type === 'heart') return item.text + (G.isStep('heartbeat') ? '　' + (WT.heartHint || '（1.5秒見つめる）') : '');
+    if (item.type === 'pad') return item.text + (G.isStep('heartbeat') ? '　' + (WT.padHint || '（照準を合わせてリズムよくタップ）') : '');
+    if (item.type === 'choice') return item.text + (G.isStep('photo') ? '　' + (WT.lockerHint || '（1.5秒見つめて開ける）') : '');
+    if (item.type === 'gaze') return G.isStep('finale') ? (G.gazeWaiting && G.gazeWaiting() ? (WT.gazeWait || '相手も窓を見るのを待っています') : (WT.gazeHint || '観測窓を2人で3秒見つめる')) : '';
     return item.text || '';
   }
   function setHint(text, read) { const key = text + '|' + read; if (key === shownHint) return; shownHint = key; $('hint').textContent = text; $('hint').classList.toggle('read', !!read); }
@@ -94,7 +99,7 @@ export function installAim(G) {
   // judge a dial after it has been held still for HOLD_SEC (local), then apply it here and on the partner's phone
   function judgeDial(v) {
     const owner = G.valveOwner(v);
-    const ok = v.kind === 'code' ? v.symbols[v.idx] === G.puzzle.code[v.codeIndex] : !!owner && v.symbols[v.idx] === owner.targetSymbol;
+    const ok = v.kind === 'lock' ? v.symbols[v.idx] === v.answer : v.kind === 'code' ? v.symbols[v.idx] === G.puzzle.code[v.codeIndex] : !!owner && v.symbols[v.idx] === owner.targetSymbol;
     applyJudge(v, ok, true);
     if (ok && G.focus === v) { clearTimeout(focusOkTimer); focusOkTimer = setTimeout(() => { if (G.focus === v) exitFocus(); }, 1300); }
     G.netSend({ t: 'judge', i: valves.indexOf(v), idx: v.idx, ok });
@@ -102,6 +107,11 @@ export function installAim(G) {
   function applyJudge(v, ok, local) {
     G.setLamp(v, ok); if (local) G.haptic(ok ? 'correct' : 'wrong');
     if (ok) { G.sfx('lock', { vol: 0.7 }); G.sfx('chime', { vol: 0.35, delay: 0.14 }); } else if (local) { G.sfx('thud', { vol: 0.7 }); G.sfx('buzz', { vol: 0.18, delay: 0.05 }); }
+    if (v.kind === 'lock') { // wing dials: every dial of the step must be right
+      v.ok = ok; if (ok) G.cue('solve');
+      if (valves.filter(x => x.kind === 'lock' && x.step === v.step).every(x => x.ok)) G.completeStep(v.step);
+      return;
+    }
     if (v.kind === 'code') { // comm dials: must show the received code
       v.ok = ok; if (ok) G.cue('solve');
       if (G.puzzle.things.dial1.ok && G.puzzle.things.dial2.ok) G.completeStep('vibrationCode');
@@ -161,10 +171,10 @@ export function installAim(G) {
     const holdingThrust = thrusting && p.thrustT > 0;
     const shown = holdingThrust && aimed && aimed.type === 'door' ? null : aimed;
     setAimVisual(shown);
-    setHint(holdingThrust ? '' : shown ? hintFor(shown) : (thrusting ? T.thrustHint : ''), shown && (shown.type === 'read' || shown.type === 'comm'));
+    setHint(holdingThrust ? '' : shown ? hintFor(shown) : (thrusting ? T.thrustHint : ''), shown && ['read', 'comm', 'heart', 'pad', 'choice'].includes(shown.type));
 
     const onValve = aimed && aimed.type === 'valve' && !aimed.valve.locked && canTurn(aimed.valve);
-    const onComm = aimed && aimed.type === 'comm' && G.reached('vibrationCode');
+    const onComm = aimed && ((aimed.type === 'comm' && G.reached('vibrationCode')) || (aimed.type === 'heart' && G.isStep('heartbeat')) || (aimed.type === 'choice' && G.isStep('photo')));
     if (onValve || onComm) offT = 0; else offT += dt;
     const target = onValve ? aimed.valve : onComm ? aimed : null;
     if (target && G.grabbed !== target) {
@@ -175,9 +185,9 @@ export function installAim(G) {
     if (G.grabbed && offT > 0.3) { if (G.grabbed.wheel) settling.add(G.grabbed); G.grabbed = null; holdT = 0; }
     const grabbed = G.grabbed;
     let prog = 0;
-    if (grabbed && grabbed.type === 'comm') { // hold on the comm panel = play the vibration code (again after looking away)
+    if (grabbed && (grabbed.type === 'comm' || grabbed.type === 'heart' || grabbed.type === 'choice')) { // hold on a panel: play the code / the heartbeat, open a locker
       if (onComm && !evaluated) { holdT += dt; prog = Math.min(1, holdT / HOLD_SEC);
-        if (holdT >= HOLD_SEC) { evaluated = true; prog = 0; G.playCode(); } }
+        if (holdT >= HOLD_SEC) { evaluated = true; prog = 0; if (grabbed.type === 'comm') G.playCode(); else if (grabbed.type === 'heart') G.playHeart(); else G.chooseLocker(grabbed); } }
     } else if (grabbed) {
       // only turn while the reticle is actually on the dial (turning away must not move it)
       const r = cameraRollCW(); let d = r - lastRoll; d = ((d + 540) % 360) - 180; lastRoll = r; if (onValve) raw += d;
@@ -189,7 +199,7 @@ export function installAim(G) {
         grabbed.idx = idx; bump(grabbed); turnedThisGrab = true; turnsDone++;
         holdT = 0; evaluated = false; G.haptic('notch'); G.sfx('dial', { vol: 0.6, vary: 0.12 });
         G.netSend({ t: 'dial', i: valves.indexOf(grabbed), idx });
-        if (grabbed.kind === 'code') grabbed.ok = false;
+        if (grabbed.kind === 'code' || grabbed.kind === 'lock') grabbed.ok = false;
         G.setLamp(grabbed, false);
         const owner = G.valveOwner(grabbed); // moving a solved valve away un-solves it
         if (owner && owner.result !== null) { owner.result = null; G.updateStatus(); }
@@ -204,6 +214,7 @@ export function installAim(G) {
     }
     settleWheels(dt);
     setTurnHint(!!(grabbed && grabbed.wheel && !turnedThisGrab && turnsDone < HINT_TURNS && !evaluated));
+    const gp = G.updateGaze ? G.updateGaze(dt, aimed) : 0; if (gp > 0.001) prog = gp; // finale: look out of the window together
     const tp = updateThrust(dt);
     const thrOn = tp > 0.01 && !players[G.cur].thrust; // thruster roar while the thrust is held
     if (thrOn !== thrustLoopOn) { thrustLoopOn = thrOn; if (G.SOUND()) G.LOOK.loop('thrust', thrOn, 0.32); }

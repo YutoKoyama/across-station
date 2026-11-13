@@ -2,8 +2,8 @@
 // 1 冷却：A/Bのバルブ（手がかりは相手側の部屋） → 2 通信：振動の暗号をダイヤルで入力 → 3 逆噴射：方位を向いて3秒 → 4 脱出
 // The order of gimmicks comes from the pack ("steps": [...]); phase n = steps[n - 1], then the ending.
 import * as THREE from '../vendor/three.module.js';
-import { FLOOR, CEIL, onWall } from './world.js?v=202611121605';
-import { seedRng, rand, shuffle, pick } from './rng.js?v=202611121605';
+import { FLOOR, CEIL, onWall } from './world.js?v=202611130129';
+import { seedRng, rand, shuffle, pick } from './rng.js?v=202611130129';
 
 export const SYMBOLS = ['○', '△', '□', '☆'];
 // vibration code: told apart by length and order only (spec 7). トン = short, ツー = long
@@ -39,7 +39,7 @@ export function installPuzzle(G) {
     // status lamp (top right of the dial): grey = not done, green = confirmed correct. Visual backup for the vibration answer.
     const lampMat = new THREE.MeshBasicMaterial({ color: LAMP.off });
     const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.13, 12), lampMat); lamp.position.set(0.85, 0.85, 0.03); holder.add(lamp);
-    const v = { kind, room: roomId, wall, symbols, idx: 0, wheel, plate, mat: wheelMat, baseEmissive: wheelMat.emissive.getHex(), root: base, locked: false, codeIndex: opts.codeIndex, lampMat };
+    const v = { kind, room: roomId, wall, symbols, idx: 0, wheel, plate, mat: wheelMat, baseEmissive: wheelMat.emissive.getHex(), root: base, locked: false, codeIndex: opts.codeIndex, lampMat, step: opts.step || (kind === 'code' ? 'vibrationCode' : 'crossValves') };
     interactive.push({ mesh: plate, room: roomId, type: 'valve', valve: v, puzzleItem: true });
     valves.push(v); return v;
   }
@@ -106,7 +106,7 @@ export function installPuzzle(G) {
     // phase 2: code table in one room, comm panel + 2 comm dials in another
     const tw = freeOf(PL.codeTableRoom)[0], R0 = roomById[PL.codeTableRoom];
     const table = tw !== undefined ? buildPanel(PL.codeTableRoom, tw, 2.4, 1.6, 0, 0.9)
-      : buildPanel(PL.codeTableRoom, freeWalls(PL.codeTableRoom).find(k => k !== R0.winWall) ?? freeWalls(PL.codeTableRoom)[0], 2.4, 1.15, 0, 2.35); // above a dial
+      : buildPanel(PL.codeTableRoom, freeWalls(PL.codeTableRoom)[0], 2.4, 1.15, 0, 2.35); // above a dial
     setPanel(table, T.codeTable, 'read', '#fde68a', '#1c1405');
     const comm = buildPanel(PL.commRoom, PL.commWall, 2.8, 1.5, 0, 0.6);
     const dials = [0, 1].map(i => buildValve(PL.commRoom, PL.dialWall, VALVE_X_OFFSET[i], { kind: 'code', codeIndex: i, title: fmt(T.dialTitle, { n: i + 1 }) }));
@@ -115,6 +115,7 @@ export function installPuzzle(G) {
     // (for the automated tests' logs only)
     puzzle.clueText = { A: `${DIR_NAME[players.A.target.wall]}の壁のバルブを「${players.A.targetSymbol}」`, B: `${DIR_NAME[players.B.target.wall]}の壁のバルブを「${players.B.targetSymbol}」` };
     puzzle.clueOf = { A: clueA, B: clueB };
+    if (G.buildExtra) G.buildExtra(puzzle); // the wings (engine/wings.js)
     setPhase(1);
     G.resetAim();
     G.showPlayer('A', false);
@@ -127,7 +128,7 @@ export function installPuzzle(G) {
     const item = setPanel(comm,
       !reached('vibrationCode') ? T.commOff : step === 'vibrationCode' ? T.commReady : fmt(T.commThrust, { dir: DIR_NAME[puzzle.thrustWall] }), 'comm', !reached('vibrationCode') ? '#64748b' : '#5dff9d');
     item.type = 'comm';
-    for (const v of valves) v.locked = v.kind === 'valve' ? step !== 'crossValves' : step !== 'vibrationCode';
+    for (const v of valves) v.locked = step !== v.step;
     $('goal').textContent = T.goals[step] || '';
     if (n > 1) G.cue(step === 'end' ? 'end' : 'step:' + step);
     G.updateStatus();
@@ -145,5 +146,5 @@ export function installPuzzle(G) {
     hq.push(() => { G.codePlaying = false; if (G.SOUND()) G.LOOK.duck(false); if (isStep('vibrationCode')) setPanel(comm, T.commReceived, 'comm'); G.updatePartner(); }); // marker: runs when the code has finished
     G.runHaptics();
   }
-  Object.assign(G, { setLamp, buildValve, setValveIdx, setPanel, stepAt, stepNow, isStep, reached, completeStep, valveOwner, newPuzzle, setPhase, playCode });
+  Object.assign(G, { buildPanel, setLamp, buildValve, setValveIdx, setPanel, stepAt, stepNow, isStep, reached, completeStep, valveOwner, newPuzzle, setPhase, playCode });
 }
