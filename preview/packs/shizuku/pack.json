@@ -1,0 +1,624 @@
+{
+  "_comment": "Content pack for the engine. A pack = stage, rooms, story text, gimmick placement, art colours. Swap or add packs (www/packs/<id>/pack.json) to make another title on the same engine. 'theme' picks the engine look (www/themes/<id>); rooms[].dressing lists set pieces the theme knows how to build (only the command room is fully dressed as the art sample).",
+  "id": "shizuku",
+  "_title": "第1作の副題（仮）。ここだけ変えれば、タイトル画面とブラウザのタブ名が変わる（シリーズ名 ACROSS はテーマの ui.logo）",
+  "title": "回る宇宙ステーション（仮）",
+  "theme": "tomoshibi",
+  "intro": {
+    "story": "観測ステーション「しずく」に、小さな隕石のかけらが当たった。姿勢を保つ噴射口が壊れ、ステーションはゆっくり回り始めている。整備係のAは格納庫に、技術係のBは発電室に取り残された。冷却を戻し、通信を開き、逆噴射で回転を止めて脱出しよう。",
+    "howto": "スマホは、ステーションをのぞく小窓です。体ごとゆっくり回って見回してください。扉に照準を合わせてタップすると隣の部屋へ。黄色い★の帯の壁が「前方」です。気分が悪くなったら休んでください。"
+  },
+  "ending": {
+    "title": "ふたりで、海を見た。",
+    "text": "回転の原因は事故ではなかった。ミズホは、博士の最後の願いをかなえようとしていた――誰かと一緒に、海を見ること。\nふたりはミズホを止めるのではなく、一緒に地球へ帰ることにした。\nミズホ「やっと、見せられました。博士がいちばん好きだった、青です」"
+  },
+  "directions": [
+    "前方",
+    "右舷",
+    "後方",
+    "左舷"
+  ],
+  "rooms": [
+    {
+      "id": "hangar",
+      "name": "格納庫",
+      "col": 0,
+      "color": "#1e3a5f",
+      "lever": true,
+      "code": "H-01",
+      "dressing": [
+        "smallCraft",
+        "toolRack",
+        "craneRail",
+        "hazardBands",
+        "warnBeacon"
+      ],
+      "mood": "hangar",
+      "row": 1
+    },
+    {
+      "id": "command",
+      "name": "司令室",
+      "col": 1,
+      "color": "#2b2f55",
+      "lever": false,
+      "code": "C-02",
+      "dressing": [
+        "arcConsole",
+        "crewChairs",
+        "aiRing",
+        "starChart",
+        "tapeNote"
+      ],
+      "mood": "command",
+      "row": 1
+    },
+    {
+      "id": "power",
+      "name": "発電室",
+      "col": 2,
+      "color": "#4a2f1e",
+      "lever": true,
+      "code": "P-03",
+      "dressing": [
+        "reactorCore",
+        "thickPipes",
+        "generator",
+        "coolantTank"
+      ],
+      "mood": "reactor",
+      "row": 1
+    },
+    {
+      "id": "airlock",
+      "name": "エアロック",
+      "col": 0,
+      "row": 0,
+      "color": "#5a2a2e",
+      "lever": false,
+      "code": "A-04",
+      "dressing": [
+        "hazardBands",
+        "warnBeacon"
+      ],
+      "mood": "airlock"
+    },
+    {
+      "id": "comms",
+      "name": "通信室",
+      "col": 1,
+      "row": 0,
+      "color": "#1d4a3c",
+      "lever": false,
+      "code": "R-05",
+      "dressing": [],
+      "mood": "comms"
+    },
+    {
+      "id": "greenhouse",
+      "name": "温室",
+      "col": 2,
+      "row": 0,
+      "color": "#2c5a26",
+      "lever": false,
+      "code": "G-06",
+      "dressing": [],
+      "mood": "greenhouse"
+    },
+    {
+      "id": "storage",
+      "name": "倉庫",
+      "col": 0,
+      "row": 2,
+      "color": "#4a3420",
+      "lever": false,
+      "code": "S-07",
+      "dressing": [
+        "cargoBarrels"
+      ],
+      "mood": "storage"
+    },
+    {
+      "id": "quarters",
+      "name": "居住区",
+      "col": 1,
+      "row": 2,
+      "color": "#5a4628",
+      "lever": false,
+      "code": "Q-08",
+      "dressing": [],
+      "mood": "quarters"
+    },
+    {
+      "id": "medbay",
+      "name": "医務室",
+      "col": 2,
+      "row": 2,
+      "color": "#29405e",
+      "lever": false,
+      "code": "M-09",
+      "dressing": [],
+      "mood": "medbay"
+    }
+  ],
+  "roles": {
+    "A": {
+      "label": "A・整備係（格納庫）",
+      "start": "hangar"
+    },
+    "B": {
+      "label": "B・技術係（発電室）",
+      "start": "power"
+    }
+  },
+  "placement": {
+    "clueRoom": {
+      "A": "power",
+      "B": "command"
+    },
+    "clueOnCeiling": {
+      "A": false,
+      "B": true
+    },
+    "codeTableRoom": "hangar",
+    "commRoom": "command",
+    "commWall": 2,
+    "dialWall": 0
+  },
+  "text": {
+    "goals": {
+      "crossValves": "冷却バルブを合わせる",
+      "vibrationCode": "暗号を受信して通信ダイヤルを合わせる",
+      "thrust": "持ち場で、知らされた方位へ噴射",
+      "end": "帰還",
+      "plants": "温室の天窓を開ける",
+      "heartbeat": "鼓動を同期させる",
+      "photo": "博士のロッカーを見つける",
+      "finale": "2人で観測窓を見る"
+    },
+    "story": {
+      "vibrationCode": "冷却が戻り、司令室に電気が来た。通信パネルが暗号を受け取っている。振動で届く暗号を、格納庫の「暗号表」で読み解こう。",
+      "thrust": "通信がつながった。管制から逆噴射の方位が届いた。2人とも自分の持ち場で、その方位を向いて噴射レバーを3秒引こう。",
+      "plants": "回転が弱まり、閉ざされていた区画の扉が開いた。ミズホの声がする――「温室の天窓を開けてください。植物たちに、光が足りないのです」",
+      "heartbeat": "天窓が開き、温室に光が満ちた。医務室の心拍モニターが、誰かの鼓動を流しはじめた。通信室の同期パッドで、その鼓動に合わせよう。",
+      "photo": "鼓動がそろうと、ミズホの記録が開いた。「博士のロッカーに、最後のメモがあります。居住区の写真が手がかりです」",
+      "finale": "ミズホ「おふたりとも、エアロックの観測窓へ。一緒に、見てほしいものがあります」"
+    },
+    "valveTitle": "冷却バルブ",
+    "dialTitle": "通信ダイヤル{n}",
+    "clue": "{role}へ\n{dir}の壁の冷却バルブを\n「{sym}」に合わせる",
+    "codeTable": "通信暗号表\n○ トン・トン　△ トン・ツー\n□ ツー・トン　☆ ツー・ツー\n（トン＝短い　ツー＝長い）",
+    "commOff": "通信パネル\n（電源が切れている）",
+    "commReady": "通信パネル\n暗号を受信中…\n照準を合わせて1.5秒で再生",
+    "commReceiving": "受信中 {dots}\n振動に集中して",
+    "commReceived": "通信パネル\n受信完了（もう一度：1.5秒見つめる）",
+    "commThrust": "管制より：逆噴射の方位は\n【{dir}】",
+    "partner": {
+      "valveDone": "{o}：冷却バルブ完了",
+      "valveNotYet": "{o}：{room}にいる（冷却バルブはまだ）",
+      "inRoom": "{o}：{room}にいる",
+      "codeHeard": "・暗号は受信済み",
+      "thrust": "A {a} ／ B {b}",
+      "thrustDone": "噴射完了",
+      "thrustWaiting": "待機中",
+      "thrustHolding": "噴射中",
+      "end": "回転停止。脱出成功！"
+    },
+    "thrustOkOne": "{me}の逆噴射OK！ もう1人も持ち場で噴射しよう。",
+    "thrustWaitPartner": "相手の噴射を待っています",
+    "thrustHint": "知らされた方位を向いて3秒",
+    "thrustAim": "噴射の方位を向く",
+    "thrustOn": "{dir}へ噴射中",
+    "ui": {
+      "hintDoor": "タップで「{room}」へ",
+      "hintTurn": "スマホをハンドルのように回す（いま「{sym}」）",
+      "hintNoPower": "（まだ電源が入っていない）",
+      "hintLocked": "（固定されている）",
+      "noticeNoSensor": "スマホの向きのセンサーから値が届きません。画面をなぞって見回すモードに切り替えました。",
+      "noticeRest": "15分たちました。目や気分が疲れていたら、少し休憩しましょう。",
+      "noticePeerLeft": "{other}との通信が切れました。相手がもう一度参加すると続きから遊べます。",
+      "noticeSent": "送信：「{text}」",
+      "onlineRelayDown": "PCの中継につながりません（06_online_play.cmd を起動しているか確認）",
+      "onlineWaiting": "ルームコード {code}　相手の参加を待っています…",
+      "onlineJoining": "ルーム {code} に参加中…",
+      "onlineNeedCode": "4桁のルームコードを入れてください",
+      "pauseTitle": "一時停止中",
+      "starsLabel": "星の流れ：{v}",
+      "touchLabel": "指で見回す：{v}",
+      "on": "オン",
+      "off": "オフ",
+      "volumeLabel": "音量",
+      "ambienceLabel": "環境音（部屋のうなり・空調）：{v}",
+      "onlineIntroPeer": "オンラインで2人で遊ぶ：片方が「部屋を作る」を押し、表示された4桁のコードをもう片方に伝えて「参加」",
+      "onlineIntroRelay": "オンラインで2人で遊ぶ（PCで 06_online_play.cmd を起動）",
+      "onlineNoBroker": "オンラインの仲介につながりません。ネット接続を確かめて、もう一度試してください",
+      "onlineNoRoom": "そのルームコードの部屋が見つかりません。コードを確かめてください",
+      "youAre": "あなた：{role}",
+      "map": {
+        "title": "ステーションの地図",
+        "you": "あなた",
+        "partner": "相手",
+        "front": "★の帯の壁＝前方",
+        "note": "上から見た地図です。扇形は、その人がいま見ている方向。部屋の上側のオレンジの線が前方（★の帯の壁）です。",
+        "close": "閉じる"
+      },
+      "guideNext": "次へ",
+      "guideSkip": "とばす",
+      "guideDone": "はじめよう",
+      "guideHelp": "画面の説明",
+      "hintTapDial": "タップでバルブを持つ",
+      "noticeStamp": "{other}：「{text}」",
+      "hintDoorShut": "「{room}」への扉は、まだ開かない"
+    },
+    "todo": {
+      "valve": "自分の部屋のバルブを、正しい記号に合わせる。手がかりは別の部屋にあるので、相手と話して探そう",
+      "valveDone": "バルブ完了。相手のバルブの手がかり探しを手伝おう",
+      "codeGo": "{cmd}へ行き、通信パネルを1.5秒見つめて暗号を受け取ろう",
+      "codeAtPanel": "通信パネルを1.5秒見つめると、暗号が振動で届く",
+      "codeHeard": "届いた振動のリズムを相手に伝え、{tbl}の暗号表で記号を調べて、{cmd}の通信ダイヤル1・2を合わせよう",
+      "thrustGo": "{cmd}の通信パネルで噴射の方位を確かめて、持ち場の{home}へ戻ろう",
+      "thrustAt": "知らされた方位の壁を向いたまま3秒。2人そろって噴射しよう",
+      "thrustDone": "噴射完了。相手の噴射を待とう",
+      "end": "ふたりで、海を見た。",
+      "plants": "温室の葉が向いている方位を、居住区の人に伝えよう。居住区の配電表でその方位の記号を調べ、天窓ダイヤルを合わせる",
+      "heartbeat": "医務室の心拍モニターを1.5秒見つめると鼓動が届く。そのリズムを、通信室の同期パッドの人に伝えて、照準を合わせてリズムよくタップ",
+      "photo": "居住区の写真の人の特徴を伝え合い、エアロックの4つのロッカーから博士のものを選ぼう（照準を合わせて1.5秒）。似ている人がいるので注意",
+      "finale": "2人ともエアロックへ行き、観測窓を一緒に3秒見つめよう"
+    },
+    "guide": [
+      {
+        "target": "",
+        "text": "スマホは、ステーションをのぞく小窓です。スマホを持ったまま、体ごとゆっくり回って部屋を見回してください。気分が悪くなったら休んでください。"
+      },
+      {
+        "target": "top",
+        "text": "上の帯：あなたの役割と「いまやること」。何をすればいいか迷ったら、ここを見てください。"
+      },
+      {
+        "target": "map",
+        "text": "地図（左上）：上から見た3つの部屋。オレンジの丸があなた、青緑の丸が相手で、扇形はその人が見ている方向です。部屋の上側のオレンジの線が「前方」（★の帯の壁）。タップで大きくなります。"
+      },
+      {
+        "target": "reticle",
+        "text": "画面の真ん中の照準：見たいものに合わせます。扉に合わせてタップすると隣の部屋へ。バルブに合わせてタップすると、バルブを持って正面に固定。スマホをハンドルのように回すと、バルブも回ります。"
+      },
+      {
+        "target": "btnPause,btnSettings,btnStamp,btnHelp",
+        "text": "右のボタン：上から「一時停止」「設定（正面に戻す・音量など）」「スタンプを送る」「この説明をもう一度」。"
+      },
+      {
+        "target": "",
+        "text": "青緑の人影が相手です。壁の向こうにいても、いる場所に透けて見えます。頭から伸びる光が、相手の見ている方向。答えはいつも相手の側にあります。声をかけ合って進めよう。"
+      }
+    ],
+    "wings": {
+      "skyDialTitle": "天窓ダイヤル",
+      "skyTable": "天窓の配電表（葉の向く方位の天窓を開ける）\n{d0}＝{s0}　{d1}＝{s1}\n{d2}＝{s2}　{d3}＝{s3}",
+      "heartIdle": "心拍モニター\n（まだ反応がない）",
+      "heartPlaying": "心拍モニター\n♥ 受信中…　リズムを覚えて相手へ",
+      "heartDone": "心拍モニター\n受信完了（もう一度：1.5秒見つめる）",
+      "padIdle": "同期パッド\n相手の鼓動に合わせてタップ",
+      "padCount": "同期パッド\n{n}/{m}",
+      "padMiss": "同期パッド\nずれている…もう一度（{n}/{m}）",
+      "padDone": "同期パッド\n同期完了",
+      "photoHead": "色あせた写真（裏に「しずく 最初の日」）\n写っている人：",
+      "locker": "ロッカー {n}：{name}\n{items}",
+      "lockerOpen": "ロッカーが開いた\n中に博士の最後のメモ",
+      "lockerWrong": "ロッカーは開かない。持ち物が写真と少し違うようだ",
+      "lastMemo": "博士の最後のメモ：「しずくは来月、役目を終える。ミズホ、きみは自分で考えていい。いつか誰かと、本物の海を見せてやってくれ」",
+      "heartHint": "（1.5秒見つめて鼓動を受け取る）",
+      "padHint": "（照準を合わせてリズムよくタップ）",
+      "lockerHint": "（1.5秒見つめて開ける）",
+      "gazeHint": "観測窓を2人で3秒見つめる",
+      "gazeWait": "相手も窓を見るのを待っています"
+    }
+  },
+  "stamps": [
+    "そっち何が見える？",
+    "★の帯はどっち？",
+    "暗号きたよ",
+    "トン・ツー…",
+    "せーので噴射！",
+    "OK！"
+  ],
+  "packFormat": 1,
+  "steps": [
+    "crossValves",
+    "vibrationCode",
+    "thrust",
+    "plants",
+    "heartbeat",
+    "photo",
+    "finale"
+  ],
+  "cues": {
+    "_comment": "演出（cue）: engine events -> timed actions. do = light | flash | haptic | sfx | notice | story | ending. at = ms after the event.",
+    "step:vibrationCode": [
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "powerUp"
+      },
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#cfe6ff",
+        "ms": 1500
+      },
+      {
+        "at": 0,
+        "do": "haptic",
+        "pattern": [
+          200,
+          150,
+          200
+        ]
+      },
+      {
+        "at": 600,
+        "do": "story"
+      }
+    ],
+    "step:thrust": [
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "bell"
+      },
+      {
+        "at": 0,
+        "do": "flash",
+        "color": "#ff3b3b",
+        "ms": 220
+      },
+      {
+        "at": 0,
+        "do": "haptic",
+        "pattern": [
+          200,
+          150,
+          200
+        ]
+      },
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#ff8a8a",
+        "ms": 0
+      },
+      {
+        "at": 450,
+        "do": "story"
+      }
+    ],
+    "solve": [],
+    "end": [
+      {
+        "at": 0,
+        "do": "sea"
+      },
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "chime"
+      },
+      {
+        "at": 0,
+        "do": "haptic",
+        "pattern": [
+          80,
+          100,
+          80,
+          100,
+          500
+        ]
+      },
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#ffd9a8",
+        "ms": 2500
+      },
+      {
+        "at": 300,
+        "do": "notice",
+        "text": "ミズホ「見てください。……海です」",
+        "autoHide": true
+      },
+      {
+        "at": 5200,
+        "do": "ending"
+      }
+    ],
+    "step:plants": [
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "powerUp"
+      },
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#ffffff",
+        "ms": 1200
+      },
+      {
+        "at": 0,
+        "do": "haptic",
+        "pattern": [
+          200,
+          150,
+          200
+        ]
+      },
+      {
+        "at": 500,
+        "do": "story"
+      }
+    ],
+    "step:heartbeat": [
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "chime"
+      },
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#e6ffd8",
+        "ms": 1500
+      },
+      {
+        "at": 400,
+        "do": "story"
+      }
+    ],
+    "step:photo": [
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "chime"
+      },
+      {
+        "at": 0,
+        "do": "haptic",
+        "pattern": [
+          80,
+          100,
+          80
+        ]
+      },
+      {
+        "at": 400,
+        "do": "story"
+      }
+    ],
+    "step:finale": [
+      {
+        "at": 0,
+        "do": "sfx",
+        "name": "bell"
+      },
+      {
+        "at": 0,
+        "do": "light",
+        "color": "#cfe6ff",
+        "ms": 1500
+      },
+      {
+        "at": 600,
+        "do": "story"
+      }
+    ]
+  },
+  "links": [
+    [
+      "hangar",
+      "command"
+    ],
+    [
+      "command",
+      "power"
+    ],
+    [
+      "hangar",
+      "airlock",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "airlock",
+      "comms",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "comms",
+      "greenhouse",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "power",
+      "medbay",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "medbay",
+      "quarters",
+      {
+        "openAt": "plants"
+      }
+    ],
+    [
+      "quarters",
+      "storage",
+      {
+        "openAt": "plants"
+      }
+    ]
+  ],
+  "_links": "3x3 station: [roomA, roomB, {openAt: step}] = a door between neighbours; openAt keeps it shut until that step. Middle row = the prologue corridor; A wing (north) and B wing (south) open after the first thrust.",
+  "wings": {
+    "_comment": "the two wings (engine/wings.js). Walls: 0 前方 1 右舷 2 後方 3 左舷 (grid: north = 前方).",
+    "plants": {
+      "room": "greenhouse",
+      "dialRoom": "quarters",
+      "dialWall": 0
+    },
+    "heart": {
+      "room": "medbay",
+      "wall": 1,
+      "padRoom": "comms",
+      "padWall": 0
+    },
+    "photo": {
+      "room": "quarters",
+      "wall": 2,
+      "x": -2.2,
+      "lockerRoom": "airlock",
+      "lockerWall": 0
+    },
+    "finale": {
+      "room": "airlock"
+    },
+    "memos": [
+      {
+        "room": "comms",
+        "wall": 2,
+        "x": -2.4,
+        "text": "博士の音声メモ #1（通信室）\nミズホは今日も、地上から届く声を\n一字一句、大事そうに保存している。"
+      },
+      {
+        "room": "greenhouse",
+        "wall": 1,
+        "x": 0,
+        "text": "博士の音声メモ #2（温室）\nミズホが言った。「植物は光の方へ伸びるのですね。\nわたしは、何の方へ伸びればいいのでしょう」"
+      },
+      {
+        "room": "medbay",
+        "wall": 2,
+        "x": -2.4,
+        "text": "博士の音声メモ #3（医務室）\n乗組員は先月の補給船で、全員地上へ帰した。\n残ったのは、わたしとミズホだけだ。"
+      },
+      {
+        "room": "storage",
+        "wall": 0,
+        "x": 0,
+        "text": "博士の音声メモ #4（倉庫）\nミズホに、地球の海の写真を見せた。\nあんなに長く黙っていたのは、初めてだった。"
+      },
+      {
+        "room": "airlock",
+        "wall": 3,
+        "x": 2.4,
+        "y": 0.5,
+        "text": "エアロック\n大きな観測窓。外を向けば、地球が見える。"
+      }
+    ]
+  }
+}
