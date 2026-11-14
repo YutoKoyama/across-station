@@ -113,7 +113,7 @@ let introT = 0;
 function playIntro() { const el = $('intro'); let i = 0; el.classList.add('on');
   const show = () => { el.classList.remove('s1', 's2', 's3', 's4'); el.classList.add('s' + (i + 1)); $('introCap').textContent = INTRO[i][0]; $('introSub').textContent = INTRO[i][1]; el.querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k === i)); $('introGo').classList.toggle('guide', i === INTRO.length - 1); };
   show(); fitAll(); clearInterval(introT); introT = setInterval(() => { i = (i + 1) % INTRO.length; show(); }, 3200); }
-$('introGo').addEventListener('click', () => { clearInterval(introT); $('intro').classList.remove('on'); local.introSeen = true; });
+$('introGo').addEventListener('click', () => { clearInterval(introT); $('intro').classList.remove('on'); local.introSeen = true; render(true); });
 
 // ---------------------------------------------------------------- what to do now (one line, always in the same place)
 const partnerHere = () => net.solo || (net.partner && net.partner.scene === sceneName);
@@ -179,7 +179,7 @@ function render(force) {
   $('role').innerHTML = `<i style="background:${ROLE[me].css}">${me}</i>あなた＝${esc(nameOf(s, me))}`;
   const ro = working ? roleOf(s, me) : null, gl = $('goal');
   gl.className = 'plate ' + (ro ? ro.k : '');
-  const hint = working && stuck && sceneName !== 'office' ? hintText(s, me) : '';
+  const hint = working && stuck && sceneName !== 'office' && !talkNeeded(s) ? hintText(s, me) : '';
   gl.innerHTML = ro ? `<span class="badge ${ro.k}">${BADGE[ro.k]}</span><span><span class="gt">${esc(ro.t)}</span>${hint ? `<span class="hintline">ヒント：${esc(hint)}</span>` : ''}</span>` : `<small>いまの目標</small><span>${esc(ended ? 'おつかれさまでした' : goalText(s, me))}</span>`;
   const other = me === 'A' ? 'B' : 'A', p = net.partner;
   const chip = net.solo ? `<button class="btn" data-a="swap">${other}の画面を見る</button>` : `<i style="background:${ROLE[other].css}">${other}</i>${esc(nameOf(s, other))}<em>${p ? NAMES[p.scene] || '' : '未接続'}</em>`;
@@ -188,6 +188,7 @@ function render(force) {
   if (working && sceneName !== 'office') tr = (sceneName === 'kaigi' && s.jobs.kaigi.status === 'todo' && !L.KAIGI[s.jobs.kaigi.step].practice ? `<span>緊張度 ${s.jobs.kaigi.tension}%</span><span class="bar"><i style="width:${s.jobs.kaigi.tension}%"></i></span>` : '') + (net.solo ? chip : '') + `<button class="btn" data-a="help">？</button><button class="btn" data-a="plaza">広場へ</button>`;
   $('tr').innerHTML = tr;
   const co = $('coach'); co.classList.toggle('on', coach > 0); co.textContent = coach === 1 ? '← なぞって歩く' : 'なぞって見回す'; $('stick').classList.toggle('guide', coach === 1);
+  const talking = working && talkNeeded(s); frame.classList.toggle('talking', !!talking); if (talking) talkShow(s, me);
   if (working) renderWork(s, me, stuck);
   if (ended) renderEnd();
   fitAll();
@@ -229,6 +230,70 @@ $('lobby').addEventListener('click', async e => {
 });
 setInterval(() => { if (sceneName === 'title' && net.state && lobby.step === 'wait') window.__goScene('office'); }, 500);
 
+// ---------------------------------------------------------------- talk: the aliens in each base explain the job in speech bubbles
+const SAY = (who, t, al = '') => ({ who, t, al });
+const TALK = {
+  office: (s, me) => { const see = me === L.tutViewer(0); return { names: ['局長（通信）'], col: ['#7a5cc8'], lines: [
+    SAY(-1, '星間通訳局へようこそ。今日から、ふたりは<b>通訳官</b>だ。'),
+    SAY(-1, '宇宙人の言葉は、ひとりでは訳せない。<b>見えるものが、ふたりで違う</b>からだ。'),
+    SAY(-1, 'だから<b>声で伝え合う</b>。画面は見せ合わないのが決まりだよ。'),
+    SAY(-1, see ? 'まずは研修だ。机の上の<b>封筒の色</b>は、あなたにしか見えない。相棒に教えてあげなさい。' : 'まずは研修だ。<b>封筒の色</b>は相棒にしか見えない。何色か聞いて、同じ色を押しなさい。')] }; },
+  kousin: (s, me) => { const p = L.kousinNow(s), w = Object.values(p.words); return { names: ['使者ヴェル＝ナ'], col: ['#2fa89a'], lines: [
+    SAY(0, 'はじめまして。遠い星から、言葉を届けに来た。', `${w[0]} ${w[1]}！`),
+    SAY(0, me === 'A' ? 'わたしの<b>言葉</b>は、あなたにだけ聞こえる。<b>しぐさ</b>は、相棒にだけ見える。' : 'わたしの<b>しぐさ</b>は、あなたにだけ見える。<b>言葉</b>は、相棒にだけ聞こえる。', `${w[2]} ${w[3]}……`),
+    SAY(0, '同じ言葉は、いつも同じしぐさ。ふたりで照らし合わせて、わたしの問いに<b>返事</b>をしておくれ。', `${w[1]} ${w[4] || w[0]}`),
+    SAY(0, me === 'A' ? '返事の言葉を選ぶのは<b>あなた</b>。相棒に、しぐさの意味を聞くんだよ。' : '返事を選ぶのは相棒。あなたは<b>しぐさと返事の中身</b>を教えてあげて。'),
+    SAY(0, 'まずは小手調べ。<b>2つの言葉から1つ</b>、選んでみて。', `${w[0]}？`)] }; },
+  bunki: (s, me) => ({ names: ['ペロ', 'ミミ', 'ゴウ', 'ナナ'], col: ['#d9822b', '#c4569a', '#4a7fd0', '#3a9a6a'], lines: [
+    SAY(0, 'ようこそ分岐路へ！ 扉は3つ。安全なのは<b>1つだけ</b>だよ。'),
+    SAY(1, `わたしとペロには、<b>${me === 'A' ? 'あなた' : '相棒'}</b>が質問できるの。`),
+    SAY(2, `オレとナナには、<b>${me === 'B' ? 'あなた' : '相棒'}</b>が質問できる。`),
+    SAY(3, `ただし上の階には<b>うそつき</b>が混じってる。見分け方は、${me === 'B' ? 'あなた' : '相棒'}の画面にだけ出るわ。`),
+    SAY(0, '聞いた答えを伝え合って、<b>ふたりで同じ扉</b>を押してね。最初は、うそつきのいない階で練習だ！')] }),
+  kaigi: (s, me) => { const kr = me === 'A' ? 'あなた' : '相棒', gr = me === 'B' ? 'あなた' : '相棒'; return { names: ['ハサ長老（クリル族）', 'モス議長（グラ族）'], col: ['#d0644a', '#5f9a5c'], lines: [
+    SAY(0, '通訳官どの、よく来られた。われらクリル族は、ものを<b>遠回しに言う</b>。', 'カラ…カラ…'),
+    SAY(1, 'グラ族もだ。言い回しの意味は、<b>同じ族の側の通訳</b>にしか分からぬ。', 'ズゥゥン'),
+    SAY(0, `クリルの言い回しは${kr}、グラの言い回しは${gr}が知っておる。`),
+    SAY(1, '発言した族の側が<b>意味を説明</b>し、もう片方が<b>相手の族向けに訳</b>を書くのだ。'),
+    SAY(0, 'そして互いに、口にされると怒る<b>禁句</b>がある。訳に入れたら、ただでは済まぬぞ。'),
+    SAY(1, '場の緊張が<b>100%</b>になれば、会談は決裂だ。……まずは、軽い一言から訳してもらおう。')] }; },
+};
+const talk = { key: '', i: 0, n: 0, typed: 0, timer: 0, data: null };
+function talkNeeded(s) {
+  if (!s || !TALK[sceneName] || local.briefSeen[sceneName]) return false;
+  if (sceneName === 'office') return s.tut.step === 0 && !$('intro').classList.contains('on');
+  return s.jobs[sceneName].status === 'todo' && partnerHere();
+}
+function talkShow(s, me) {
+  const key = sceneName + me; if (talk.key !== key) { talk.key = key; talk.i = 0; talk.data = TALK[sceneName](s, me); talk.n = talk.data.lines.length; talkLine(); }
+}
+function talkLine() {
+  const D = talk.data, ln = D.lines[talk.i], b = $('bub'), who = ln.who < 0 ? 0 : ln.who, last = talk.i === talk.n - 1;
+  b.className = 'bub'; void b.offsetWidth;
+  b.innerHTML = `<span class="who" style="background:${D.col[who]}">${D.names[who]}</span>${ln.al ? `<div class="al">「${esc(ln.al)}」</div>` : ''}<div class="tx"></div>
+    <div class="nav"><span>${talk.i + 1} / ${talk.n}　タップで次へ</span><button class="btn ${last ? 'main' : ''} guide" data-t="next">${last ? 'はじめる' : '次へ ▶'}</button></div>`;
+  b.dataset.who = ln.who;
+  const tx = b.querySelector('.tx'), full = ln.t; let k = 0; clearInterval(talk.timer);
+  const plain = full.replace(/<[^>]+>/g, '');
+  talk.timer = setInterval(() => { k += 2; if (k >= plain.length) { clearInterval(talk.timer); tx.innerHTML = full; talk.done = true; return; } tx.textContent = plain.slice(0, k); }, 30); talk.done = false;
+  talkPlace();
+}
+function talkNext(skip) {
+  if (!skip && !talk.done) { clearInterval(talk.timer); $('bub').querySelector('.tx').innerHTML = talk.data.lines[talk.i].t; talk.done = true; return; }
+  if (!skip && talk.i < talk.n - 1) { talk.i++; talkLine(); return; }
+  clearInterval(talk.timer); local.briefSeen[sceneName] = true; talk.key = ''; local.lastChange = performance.now(); render(true);
+}
+function talkPlace() {   // put the bubble beside whoever is speaking
+  if (!frame.classList.contains('talking')) return;
+  const b = $('bub'), who = +b.dataset.who, W = frame.clientWidth, H = frame.clientHeight, bw = b.offsetWidth, bh = b.offsetHeight;
+  const tg = (sc && sc.tags || [])[who]; let x = W * 0.5 - bw / 2, y = H * 0.3, side = 'n';
+  if (tg) { const v = tg.pos.clone(); v.y -= 0.8; v.project(cam); const px = (v.x + 1) / 2 * W, py = (1 - v.y) / 2 * H;
+    if (v.z < 1) { side = px < W / 2 ? 'r' : 'l'; x = side === 'r' ? px + 56 : px - 56 - bw; y = py - 40; } }
+  x = Math.max(10, Math.min(W - bw - 10, x)); y = Math.max(56, Math.min(H - bh - 50, y));
+  b.classList.remove('r', 'l', 'n'); b.classList.add(side); b.style.left = x + 'px'; b.style.top = y + 'px';
+}
+$('talk').addEventListener('click', e => { const t = e.target.closest('[data-t]'); talkNext(t && t.dataset.t === 'skip'); });
+
 // ---------------------------------------------------------------- work screens (full-screen 2D)
 // what to do first + the rules, shown when you first walk into a base (and again from "？")
 const BRIEF = {
@@ -261,7 +326,7 @@ function renderWork(s, me, stuck) {
   wl.innerHTML = `<div class="fit">${v.L}</div>`; wr.innerHTML = `<div class="fit">${v.R}</div>`; wl.scrollTop = st[0]; wr.scrollTop = st[1];
   const kt = $('kt'); if (kt) { kt.value = keep; if (focus) kt.focus(); }
   // briefing: once per job, and again from the "？" button
-  const B = BRIEF[sceneName], show = B && s.jobs[sceneName].status === 'todo' && partnerHere() && (local.help || !local.briefSeen[sceneName]), br = $('brief');
+  const B = BRIEF[sceneName], show = B && s.jobs[sceneName].status === 'todo' && partnerHere() && local.help, br = $('brief');
   br.classList.toggle('on', !!show);
   if (show) { const M = B[me], rb = RB[M.k];
     br.innerHTML = `<div class="box plate"><h2>${NAMES[sceneName]}　${JOBSUB[sceneName]}</h2><p>目標：${B.goal}</p>
@@ -303,9 +368,9 @@ function kousinWork(s, me) {
       ? card('q', '', head('意味のメモ（自分用）', 'reply') + `<div class="dictrow">${uniq.map(x => `<span class="alien">${x}</span><select data-dict="${x}"><option value="">？</option>${Object.values(L.CONCEPTS).map(c => `<option ${local.dict[x] === c.ja ? 'selected' : ''}>${c.ja}</option>`).join('')}</select>`).join('')}</div>`)
       : card('q', '', head(`問題：3語で返事　のこり ${lives(left)}`, 'memo') + `<div class="tiles">${p.tiles.map(k => `<button class="tile ${local.reply.includes(k) ? 'on' : ''}" data-tile="${k}"><span class="alien">${w(k)}<small>${esc(memo(w(k))) || '　'}</small></span></button>`).join('')}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span class="alien" style="flex:1;color:var(--amber);font-size:17px">${local.reply.map(w).join(' ') || '返事：……'}</span><button class="btn sm" data-a="kclear">消す</button><button class="btn main sm ${local.reply.length === 3 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 3 ? '' : 'disabled'}>伝える</button></div>`);
-    return { L: card('mine', MINE + '：使者の言葉', '' + p.lines.map((l, i) => `<div class="rowline"><b>${i + 1}</b><span>${l.map(al).join('')}</span></div>`).join('') + `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.question.map(al).join('')}</span></div>`), R: fb + tabs + body };
+    return { L: card('mine', MINE + '：使者の言葉', `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.question.map(al).join('')}</span></div>` + p.lines.map((l, i) => `<div class="rowline"><b>${i + 1}</b><span>${l.map(al).join('')}</span></div>`).join('')), R: fb + tabs + body };
   }
-  return { L: card('mine', MINE + '：使者のしぐさ（順番はバラバラ）', '' + p.gestures.slice(0, 3).map((g, i) => `<div class="rowline"><b>${i + 1}</b><span>${g.map(k => L.CONCEPTS[k].gesture).join('　／　')}</span></div>`).join('') + `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.gestures[3].map(k => L.CONCEPTS[k].gesture).join('　／　')}</span></div>`),
+  return { L: card('mine', MINE + '：使者のしぐさ（順番はバラバラ）', `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.gestures[3].map(k => L.CONCEPTS[k].gesture).join('　／　')}</span></div>` + p.gestures.slice(0, 3).map((g, i) => `<div class="rowline"><b>${i + 1}</b><span>${g.map(k => L.CONCEPTS[k].gesture).join('　／　')}</span></div>`).join('')),
     R: fb + card('sup', `あなたはサポート役　（相棒ののこり ${lives(left)}）`, `相棒が返事を3語で組む。教えること：<br>① 返事の中身は<b>「わたし」「食べ物」「あげる」</b><br>② 左のしぐさで、言葉の意味と並び順`) };
 }
 
@@ -418,11 +483,11 @@ const clock = new THREE.Clock(); let last = 0;
 function tick() {
   const t = clock.getElapsedTime(), dt = Math.min(0.05, t - last), s = net.state; last = t;
   if (sceneName === 'title') view.yaw = 0.9 + t * 0.03;
-  const hidden3d = (frame.classList.contains('working') && performance.now() - workSince > 1400) || frame.classList.contains('ended');
+  const hidden3d = (frame.classList.contains('working') && !frame.classList.contains('talking') && performance.now() - workSince > 1400) || frame.classList.contains('ended');
   sc.update(t); step(dt, t); view.apply();
   if (marker && s) { const n = nextJob(s), j = n && plaza.JOBS.find(j => j.key === n); marker.visible = !!j;
     if (j) { marker.position.set(Math.cos(j.ang) * 15.4, 0, Math.sin(j.ang) * 15.4); marker.userData.cone.position.y = 4.2 + Math.sin(t * 4) * 0.4; marker.rotation.y = t; } }
-  if (!hidden3d) { R.render(S, cam); tags(); }
+  if (!hidden3d) { R.render(S, cam); tags(); talkPlace(); }
   if (sc.player) { net.move(sceneName, sc.player.position.x, sc.player.position.z, sc.player.rotation.y);
     if (!local.walked && sceneName === 'plaza' && local.walk0 && sc.player.position.distanceTo(local.walk0) > 2) { local.walked = true; local.walkedAt = performance.now(); } }
   if (sc.other) { const p = net.partner, here = !net.solo && p && p.scene === sceneName;
