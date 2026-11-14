@@ -90,7 +90,8 @@
   .rowline b{flex:none;width:22px;height:22px;border-radius:50%;background:rgba(150,175,240,.2);display:grid;place-items:center;font-size:13px;align-self:center}
   .alien{font-family:"DotGothic16",monospace;font-size:18px;color:var(--teal);letter-spacing:.04em}
   .alien small{display:block;font-family:"M PLUS Rounded 1c",sans-serif;font-size:11px;color:var(--mut);letter-spacing:0}
-  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+  .tile{min-width:0} .tile .alien{white-space:nowrap}
   .tile{min-height:48px;border-radius:12px;border:1.5px solid rgba(95,224,200,.6);background:rgba(10,44,50,.8);padding:4px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .tile .alien{font-size:15px;white-space:nowrap;letter-spacing:0}
   .tile.on{background:var(--teal)}.tile.on .alien,.tile.on .alien small{color:#06231e}
