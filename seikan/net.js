@@ -22,7 +22,8 @@ export function makeNet(onChange) {
     if (N.role === 'B') { const host = others.find(p => p.role === 'A' && p.state); if (host && (!N.state || host.state.v !== N.state.v || host.state.seed !== N.state.seed)) N.state = host.state; }
     if (N.role === 'A' && N.partner && N.state) {
       let changed = false;
-      for (const a of (N.partner.acts || [])) if (a.n > N.lastSeen) { N.lastSeen = a.n; if (apply(N.state, a)) changed = true; }
+      for (const a of (N.partner.acts || [])) if (a.n > N.lastSeen) { N.lastSeen = a.n; a.role = 'B'; if (apply(N.state, a)) changed = true; }
+      N.state.seen = N.lastSeen;      // saved with the state, so a reloaded host does not run B's old actions again
       if (changed) publish(true);
     }
     onChange();
@@ -41,10 +42,14 @@ export function makeNet(onChange) {
   // an action: the host applies it at once; B sends it through its presence
   N.act = a => {
     a = { ...a, role: a.role || N.role, n: Date.now() * 100 + (++N.seq % 100) };
-    if (N.role === 'A' || N.solo) { if (N.state && apply(N.state, a)) publish(true); onChange(); return; }
+    if (N.role === 'A' || N.solo) { if (N.state && apply(N.state, a)) { N.state.seen = N.lastSeen; publish(true); } onChange(); return; }
     N.acts.push(a); publish(true); onChange();
   };
-  N.setState = s => { N.state = s; publish(true); onChange(); };
+  // a state that comes with its own `seen` (a saved room) restores it; a brand-new state skips whatever B has already sent
+  N.setState = s => {
+    const pn = Math.max(0, ...(((N.partner && N.partner.acts) || []).map(a => a.n)));
+    N.lastSeen = Math.max(N.lastSeen, s.seen || 0, s.seen === undefined ? pn : 0); s.seen = N.lastSeen;
+    N.state = s; publish(true); onChange(); };
   N.publish = () => publish(true);
   N.move = (scene, x, z, ry) => { const m = N.me; if (m.scene === scene && Math.abs(m.x - x) < 0.05 && Math.abs(m.z - z) < 0.05 && Math.abs(m.ry - ry) < 0.05) return; Object.assign(m, { scene, x, z, ry }); publish(false); };
   N.setName = n => { N.me.name = n; publish(true); };

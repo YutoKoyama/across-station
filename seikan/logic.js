@@ -20,6 +20,13 @@ export const CONCEPTS = {
 };
 const SYL = ['ソル', 'ミ', 'カナ', 'テ', 'ヴォ', 'リュ', 'ザン', 'ペ', 'オル', 'ニ', 'クゥ', 'ラ', 'エム', 'トゥ', 'ジ', 'ファ', 'ネ', 'ゾ'];
 const ORDERS = ['SOV', 'VSO', 'OVS', 'OSV', 'VOS'];
+// what the real reply says (わたし・食べ物・あげる). The practice round and the envoy's rescue only ever use the OTHER words,
+// so neither can tell A which words are in the answer.
+export const ANSWER_IDS = ['me', 'food', 'give'];
+export const NON_ANSWER = Object.keys(CONCEPTS).filter(k => !ANSWER_IDS.includes(k));
+export const KOUSIN_LOCK_MS = 15000;     // from the 3rd miss on, the send button rests this long
+export const KOUSIN_LOCK_FROM = 3;
+export const KOUSIN_REVEAL_MAX = 1;   // teach words (2) + this many = still one non-answer word left unexplained, so "every explained word is not in the answer" cannot narrow A down to the 3 answer words
 export function kousinPuzzle(seed) {
   const r = rng(seed * 7 + 11), used = new Set(), words = {};
   for (const k of Object.keys(CONCEPTS)) { let w; do { w = pick(r, SYL) + pick(r, SYL); } while (used.has(w) || w.length > 5); used.add(w); words[k] = w; }
@@ -27,14 +34,26 @@ export function kousinPuzzle(seed) {
   const say = trip => { const by = { S: trip[0], O: trip[1], V: trip[2] }; return order.split('').map(x => by[x]); };
   const lines = [['me', 'water', 'want'], ['you', 'water', 'give'], ['me', 'star', 'give']].map(say);
   const question = say(['you', 'food', 'want']);
-  const answer = say(['me', 'food', 'give']);
+  const answer = say(ANSWER_IDS);
   const gestures = lines.concat([question]).map(l => shuffle(r, l));
   const tiles = shuffle(r, Object.keys(CONCEPTS));
-  // teaching round: two single words with one gesture each, in the same order on both phones
-  const tOrder = shuffle(r, ['water', 'food']), teach = { order: tOrder, target: pick(r, tOrder) };
+  // teaching round: a small version of the real thing. Two sentences of two words, one word shared.
+  // A sees the words, B sees the gestures (order shuffled) -> the two have to be matched up.
+  const [tx, tc, ty] = shuffle(r, NON_ANSWER), tLines = [[tx, tc], [tc, ty]].map(l => shuffle(r, l));
+  const teach = { order: [tx, ty], common: tc, lines: tLines, gestures: tLines.map(l => shuffle(r, l)), target: pick(r, [tx, ty]), tiles: shuffle(r, [tx, tc, ty]) };
   return { words, order, lines, question, answer, gestures, tiles, teach };
 }
 export const kousinCheck = (p, ids) => ids.length === 3 && ids.every((x, i) => x === p.answer[i]);
+// how close a wrong reply was: right words (any place) / right words in the right place
+export const kousinHit = (p, ids) => ({ words: ids.filter(x => p.answer.includes(x)).length, pos: ids.filter((x, i) => x === p.answer[i]).length });
+// rescue after the 2nd miss: the envoy says one more word slowly.
+// Only words that are NOT in the answer are explained (at most KOUSIN_REVEAL_MAX), and never when all 3 words were already right (then the order is what is missing).
+function kousinReveal(p, j, hit) {
+  if (hit.words === 3 || (j.reveal || []).length >= KOUSIN_REVEAL_MAX) return null;
+  const seen = new Set([...p.teach.order, ...(j.reveal || [])]);
+  const k = NON_ANSWER.find(x => !seen.has(x)); if (!k) return null;
+  (j.reveal || (j.reveal = [])).push(k); return k;
+}
 
 // ------------------------------------------------------------------ 分岐路：うそつき案内人
 export const GUIDES = {
@@ -51,35 +70,37 @@ export function bunkiSafes(p) {
     if (ids.every((g, i) => says[i] === (liars.includes(g) ? shiftDoor(s, p.shift) : s))) out.add(s); }
   return [...out];
 }
-export function bunkiPuzzle(seed, stage = 1) {
+// what one side (A: pero+mimi, B: gou+nana) could work out from its own two answers alone, if it also knew the floor's rule
+export function bunkiAlone(p, side) {
+  const ids = Object.keys(GUIDES), mine = ids.filter(g => GUIDES[g].who === side), out = new Set();
+  const says = g => (p.liars.includes(g) ? shiftDoor(p.safe, p.shift) : p.safe);
+  for (let sf = 1; sf <= 3; sf++) for (let m = 1; m < 16; m++) { const liars = ids.filter((_, i) => (m >> i) & 1); if (liars.length > 2) continue;
+    if (mine.every(g => says(g) === (liars.includes(g) ? shiftDoor(sf, p.shift) : sf))) out.add(sf); }
+  return [...out];
+}
+// the lying rule (+1 or -1) is decided once per run (from the run's seed) so a new floor never changes it silently
+export const bunkiShift = s => (s.seed % 2 ? 1 : -1);
+// A real floor: one side's two guides both lie and the other side's both tell the truth. The two sides then disagree
+// and only B's rule says who is lying -> neither A nor B can decide alone, both are needed.
+export function bunkiPuzzle(seed, stage = 1, shift = 1) {
   if (stage === 0) { const r = rng(seed * 5 + 3); return { safe: 1 + Math.floor(r() * 3), shift: 1, liars: [], stage: 0 }; }
-  for (let t = 0; t < 20; t++) { const r = rng(seed * 13 + 5 + t * 101), safe = 1 + Math.floor(r() * 3), shift = r() < 0.5 ? 1 : -1;
-    const liars = shuffle(r, Object.keys(GUIDES)).slice(0, r() < 0.5 ? 1 : 2), p = { safe, shift, liars, stage: 1 };
-    const fits = bunkiSafes(p); if (fits.length === 1 && fits[0] === safe) return p; }   // only puzzles with exactly one answer
-  return { safe: 1, shift: 1, liars: ['pero'], stage: 1 };
+  for (let t = 0; t < 40; t++) { const r = rng(seed * 13 + 5 + t * 101), safe = 1 + Math.floor(r() * 3);
+    const liars = r() < 0.5 ? ['pero', 'mimi'] : ['gou', 'nana'], p = { safe, shift, liars, stage: 1 };
+    const fits = bunkiSafes(p); if (fits.length === 1 && fits[0] === safe && bunkiAlone(p, 'A').length > 1 && bunkiAlone(p, 'B').length > 1) return p; }
+  return { safe: 1, shift, liars: ['pero', 'mimi'], stage: 1 };
 }
 export const BUNKI_RULE = p => p.stage === 0 ? 'この階に、うそつきはいない（練習）。'
-  : `うそつきは、扉の番号を1つ${p.shift === 1 ? '大きく（3の次は1）' : '小さく（1の前は3）'}ずらして言う。「はい・いいえ」は逆に言う。うそつきは1人か2人。`;
-export function bunkiFact(p, guide, q, arg) {
-  const lie = p.liars.includes(guide);
-  if (q === 'door') return (lie ? shiftDoor(p.safe, p.shift) : p.safe) + '番';
-  const truth = !p.liars.includes(arg);
-  return (lie ? !truth : truth) ? 'はい' : 'いいえ';
-}
+  : `うそつきは、扉の番号を1つ${p.shift === 1 ? '大きく（3の次は1）' : '小さく（1の前は3）'}ずらして言う。うそつきは1人か2人。`;
+export function bunkiFact(p, guide) { return (p.liars.includes(guide) ? shiftDoor(p.safe, p.shift) : p.safe) + '番'; }
 export function factOk(text, fact) {
-  if (fact.endsWith('番')) { const nums = (text.match(/[1-3１-３]\s*番/g) || []).map(x => x.replace(/[１-３]/, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\s/g, '')); return nums.length > 0 && nums.every(x => x === fact); }
-  const yes = /はい/.test(text), no = /いいえ/.test(text); return fact === 'はい' ? yes && !no : no && !yes;
+  const nums = (text.match(/[1-3１-３]\s*番/g) || []).map(x => x.replace(/[１-３]/, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\s/g, '')); return nums.length > 0 && nums.every(x => x === fact);
 }
 export const GUIDE_VOICE = { pero: '元気で子どもっぽい。語尾は「〜だよ！」', mimi: '気弱で自信がない。「……」が多く、語尾は「〜だと思う」', gou: 'ロボット。かたい言葉で「回答。」から始める', nana: 'お嬢さま口調。「ふふ」「〜ですわ」' };
-export function guidePrompt(guide, q, arg, fact) {
-  const what = q === 'door' ? `「安全な扉は何番？」と聞かれ、「${fact}」と答える` : `「${GUIDES[arg].name}は正直？」と聞かれ、「${fact}」と答える`;
+export function guidePrompt(guide, fact) {
   return `異星の迷宮の案内人「${GUIDES[guide].name}」の台詞を1つ書いてください。性格：${GUIDE_VOICE[guide]}。
-${what}。答えの中身（${fact}）は必ずそのままの言葉で入れ、ほかの番号や「はい」「いいえ」は入れない。嘘をついているかどうかには触れない。40文字以内。台詞だけを返す。`;
+「安全な扉は何番？」と聞かれ、「${fact}」と答える。答えの中身（${fact}）は必ずそのままの言葉で入れ、ほかの番号は入れない。嘘をついているかどうかには触れない。40文字以内。台詞だけを返す。`;
 }
-export function bunkiAnswer(p, guide, q, arg) {
-  const f = bunkiFact(p, guide, q, arg);
-  return GUIDES[guide].say(q === 'door' ? `安全な扉は「${f}」` : `${GUIDES[arg].name}は正直か？ ── ${f}`);
-}
+export const bunkiAnswer = (p, guide) => GUIDES[guide].say(`安全な扉は「${bunkiFact(p, guide)}」`);
 
 // ------------------------------------------------------------------ 和平会議：通訳官
 export const CULTURE = {
@@ -87,23 +108,27 @@ export const CULTURE = {
     idioms: [['殻がまだ乾いていない', 'まだ怒っている'], ['砂をかける', '侮辱する'], ['潮が満ちるまで待つ', '急がず受け入れる']],
     taboo: ['乾', '干', '割'], why: '死や敗北を思わせるから' },
   gura: { name: 'グラ族', side: 'B', boss: 'モス議長',
-    idioms: [['葉を重ねる', '約束する'], ['日なたを分ける', '協力する'], ['根に誓う', '心から誓う']],
+    idioms: [['葉を重ねる', '約束する'], ['日なたを分ける', '協力する'], ['根に誓う', '心から誓う'], ['砂をかけぬ（クリルの言い方）', '侮辱しない']],
     taboo: ['根', '抜', '枯'], why: 'よその者が口にすると侮辱になるから' },
 };
+// ban = the plainest words (with their hiragana readings; the text is normalised before comparing) for the meaning: the writer may not use them, so the two have to find another way to say it (the practice has none)
 export const KAIGI = [
-  { from: 'gura', to: 'krill', text: '日なたを分けてくれぬか。', meaning: '協力してほしい', keys: ['協力', '助け', '手伝', '一緒', '力を', '手を'], practice: true },
-  { from: 'krill', to: 'gura', text: '砂をかけられた件、われらの殻はまだ乾いておらぬ。', meaning: '侮辱されたことを、まだ怒っている', keys: ['怒', '許', '不満', '侮辱', '腹', '納得'] },
-  { from: 'gura', to: 'krill', text: 'あの件は葉を重ねて償いたい。日なたを分けてはくれぬか。', meaning: '約束して償うので、協力してほしい', keys: ['約束', '償', '協力', '助け', '手を'] },
-  { from: 'krill', to: 'gura', text: '潮が満ちるまで待とう。だが二度と砂はかけるな。', meaning: '急がずに受け入れる。ただし二度と侮辱しないこと', keys: ['待', '受け入れ', '時間', '二度と', '侮辱'] },
-  { from: 'gura', to: 'krill', text: '根に誓う。われらは二度と砂をかけぬ。', meaning: '心から誓う。二度と侮辱しない', keys: ['誓', '約束', '二度と', '侮辱', 'しない'] },
+  { from: 'gura', to: 'krill', text: '日なたを分けてくれぬか。', meaning: '協力してほしい', practice: true },
+  { from: 'krill', to: 'gura', text: '砂をかけられた件、われらの殻はまだ乾いておらぬ。', meaning: '侮辱されたことを、まだ怒っている', ban: [['怒', 'おこっ', 'おこる', 'おこり', 'おこら', 'いかり', 'いかっ', 'いかる'], ['侮辱', 'ぶじょく']] },
+  { from: 'gura', to: 'krill', text: 'あの件は葉を重ねて償いたい。日なたを分けてはくれぬか。', meaning: '約束して償うので、協力してほしい', ban: [['約束', 'やくそく'], ['協力', 'きょうりょく']] },
+  { from: 'krill', to: 'gura', text: '潮が満ちるまで待とう。だが二度と砂はかけるな。', meaning: '急がずに受け入れる。ただし二度と侮辱しないこと', ban: [['受け入れ', '受け入', '受入', 'うけいれ', 'うけいる'], ['二度と', '2度と', 'にどと', '二どと']] },
+  { from: 'gura', to: 'krill', text: '根に誓う。われらは二度と砂をかけぬ。', meaning: '心から誓う。二度と侮辱しない', ban: [['誓', 'ちかう', 'ちかい', 'ちかっ', 'ちかお'], ['約束', 'やくそく']] },
 ];
+export const LAST = KAIGI.length - 1;
 export const writerOf = st => CULTURE[st.to].side;          // knows the listener's taboo words -> writes
-export const hearerOf = st => CULTURE[st.from].side;        // understands the speaker's idioms -> explains aloud
-export const tabooIn = (st, text) => CULTURE[st.to].taboo.filter(w => text.includes(w));
-export function fallbackJudge(st, text) {
-  const ok = text.trim().length >= 4 && st.keys.some(k => text.includes(k));
-  return { ok, reason: ok ? '要点が伝わった' : '要点が伝わっていない', reaction: ok ? 'ふむ……よく分かった。' : '……何を言っておるのか分からぬ。', by: 'rule' };
-}
+export const hearerOf = st => CULTURE[st.from].side;        // understands the speaker's idioms -> explains aloud, and says whether the meaning got across
+// comparing: full-width/half-width unified, katakana -> hiragana, spaces and dividers dropped (so "や く そ く" and "ヤクソク" do not slip through)
+export const kana = t => String(t ?? '').normalize('NFKC').replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/[\s・、。,.\-_\/\\'"「」『』()（）!！?？…~〜]/g, '');
+export const tabooIn = (st, text) => { const t = kana(text); return CULTURE[st.to].taboo.filter(w => t.includes(kana(w))); };
+// st.ban = groups [shown word, ...its readings]; the first one is what the red card shows and what a failure names
+export const banIn = (st, text) => { const t = kana(text); return (st.ban || []).filter(g => g.some(w => t.includes(kana(w)))).map(g => g[0]); };
+export const banShown = st => (st.ban || []).map(g => g[0]);
+export const startTension = step => (step >= LAST ? 70 : 40);     // the last topic starts tense
 export function judgePrompt(st, text) {
   const c = CULTURE[st.to], clean = String(text).replace(/[<>]/g, '').slice(0, 80);
   return `あなたは異星間の和平会議の判定役です。通訳官の訳が、元の発言の意味を${c.name}に伝えているかだけを判定します。
@@ -115,7 +140,16 @@ reason: 判定の理由を日本語20字以内で（例「怒りが伝わった�
 reaction: ${c.name}の代表（${c.boss}）がこの訳を聞いたときの一言。日本語25字以内。
 JSONだけを返す: {"ok": true, "reason": "...", "reaction": "..."}`;
 }
-export const tensionDelta = j => (j.taboo && j.taboo.length ? 25 : j.ok ? -15 : 20);
+// the game's own rule check (no AI, no partner): a taboo word of the listener's tribe, or a word banned on this topic
+export function ruleJudge(st, text) {
+  const taboo = tabooIn(st, text), ban = banIn(st, text); if (!taboo.length && !ban.length) return null;
+  return { ok: false, taboo, ban, by: 'rule',
+    reason: taboo.length ? `禁句「${taboo.join('」「')}」が入っている` : `言い換え禁止語「${ban.join('」「')}」が入っている`,
+    reaction: taboo.length ? `${CULTURE[st.to].boss}の顔色が変わった！` : 'その言葉は使えない。言い換えよう' };
+}
+export const hearerJudge = (st, ok) => ({ ok, by: 'hearer', reason: ok ? '相棒が「伝わった」と判定' : '相棒が「ずれている」と判定',
+  reaction: ok ? `${CULTURE[st.to].boss}：ふむ……よく分かった。` : `${CULTURE[st.to].boss}：……何を言っておるのか分からぬ。` });
+export const tensionDelta = j => ((j.taboo && j.taboo.length) || (j.ban && j.ban.length) ? 25 : j.ok ? -15 : 20);
 
 // ------------------------------------------------------------------ whole-run state (the host keeps it, both phones draw it)
 export const JOBS = ['kousin', 'bunki', 'kaigi'];
@@ -123,16 +157,28 @@ export function newState(seed, names) {
   return { v: 1, phase: 'work', seed, names, startedAt: Date.now(), finishedAt: 0, log: [],
     tut: { step: 0, miss: 0, last: null },
     jobs: {
-      kousin: { status: 'todo', stage: 0, attempt: 0, misses: 0, tmiss: 0, last: null },
+      kousin: { status: 'todo', stage: 0, attempt: 0, misses: 0, tmiss: 0, last: null, hit: null, reveal: [], lockUntil: 0 },
       bunki: { status: 'todo', stage: 0, attempt: 0, misses: 0, tmiss: 0, asked: {}, votes: { A: 0, B: 0 }, last: null },
-      kaigi: { status: 'todo', attempt: 0, step: 0, tension: 40, fails: 0, history: [] },
+      kaigi: { status: 'todo', attempt: 0, step: 0, tension: 40, fails: 0, history: [], pending: null },
     }, survey: {} };
 }
 export const jobSeed = (s, key) => s.seed + s.jobs[key].attempt * 1009 + key.length * 31;
 export const kousinNow = s => kousinPuzzle(jobSeed(s, 'kousin'));
-export const bunkiNow = s => bunkiPuzzle(jobSeed(s, 'bunki'), s.jobs.bunki.stage);
+export const bunkiNow = s => bunkiPuzzle(jobSeed(s, 'bunki'), s.jobs.bunki.stage, bunkiShift(s));
 const allDone = s => JOBS.every(k => s.jobs[k].status !== 'todo');
 const mark = (s, k) => s.log.push({ k, t: Date.now() - s.startedAt });
+
+// one judged translation -> tension, history, next topic. Used by every way a translation gets judged.
+function kaigiResolve(s, text, jd, role) {
+  const j = s.jobs.kaigi, st = KAIGI[j.step], pass = !!jd.ok && !(jd.taboo && jd.taboo.length) && !(jd.ban && jd.ban.length), d = st.practice ? 0 : tensionDelta(jd);
+  j.tension = Math.max(0, Math.min(100, j.tension + d));
+  const e = { step: j.step, who: role, text, judge: jd, d, pass }; j.history.push(e);
+  if (!pass && !st.practice) j.fails++;
+  if (j.tension >= 100) { j.attempt++; j.tension = Math.max(60, startTension(j.step)); j.history.push({ broken: true, step: j.step }); }   // only this topic is played again
+  else if (pass) { if (st.practice) mark(s, 'kaigi0'); j.step++;
+    if (j.step >= KAIGI.length) { j.status = 'done'; mark(s, 'kaigi'); }
+    else if (j.step === LAST) { j.tension = Math.max(j.tension, startTension(LAST)); e.tense = true; } }
+}
 
 export function apply(s, a) {
   const J = s.jobs;
@@ -142,16 +188,20 @@ export function apply(s, a) {
       break; }
     case 'kousin_reply': { const j = J.kousin; if (j.status !== 'todo') return false; const p = kousinNow(s);
       if (j.stage === 0) { if (a.ids[0] === p.teach.target) { j.stage = 1; j.last = 'teach_ok'; mark(s, 'kousin0'); } else { j.tmiss++; j.last = 'teach_miss'; } break; }
-      if (kousinCheck(p, a.ids)) { j.status = 'done'; j.last = 'ok'; mark(s, 'kousin'); }
-      else { j.misses++; j.last = 'miss'; if (j.misses % 3 === 0) { j.attempt++; j.stage = 1; j.last = 'reset'; } }
+      if (j.lockUntil && Date.now() < j.lockUntil) return false;      // resting after repeated misses
+      j.hit = null; j.gave = null;
+      if (kousinCheck(p, a.ids)) { j.status = 'done'; j.last = 'ok'; j.lockUntil = 0; mark(s, 'kousin'); }
+      else { j.misses++; j.last = 'miss'; j.hit = kousinHit(p, a.ids); if (j.misses >= 2) j.gave = kousinReveal(p, j, j.hit);
+        if (j.misses >= KOUSIN_LOCK_FROM) j.lockUntil = Date.now() + KOUSIN_LOCK_MS; }   // no reset: what the two built up stays
       break; }
     case 'bunki_ask': { const j = J.bunki; if (j.status !== 'todo') return false;
       const g = GUIDES[a.guide]; if (!g || g.who !== a.role) return false;
-      const list = j.asked[a.guide] || (j.asked[a.guide] = []); if (list.length >= 3) return false;
-      const bp = bunkiNow(s), plain = bunkiAnswer(bp, a.guide, a.q, a.arg), fact = bunkiFact(bp, a.guide, a.q, a.arg);
+      const list = j.asked[a.guide] || (j.asked[a.guide] = []); if (list.length >= 1) return false;   // the only question is "which door?", asking twice gives the same answer
+      const bp = bunkiNow(s), plain = bunkiAnswer(bp, a.guide), fact = bunkiFact(bp, a.guide);
       const say = typeof a.say === 'string' && a.say.length <= 80 && factOk(a.say, fact) ? a.say : plain;   // AI wording is kept only if it still states the fact
-      list.push({ q: a.q, arg: a.arg ?? null, ans: say, fact }); break; }
+      list.push({ q: 'door', ans: say, fact }); break; }
     case 'bunki_vote': { const j = J.bunki; if (j.status !== 'todo') return false;
+      if (a.attempt !== undefined && (a.attempt !== j.attempt || a.stage !== j.stage)) return false;   // a vote for an earlier floor is stale
       j.votes[a.role] = a.door; j.last = null;
       if (j.votes.A && j.votes.A === j.votes.B) { const p = bunkiNow(s), right = j.votes.A === p.safe;
         if (j.stage === 0) { if (right) { j.stage = 1; j.last = { k: 'teach_ok' }; mark(s, 'bunki0'); } else { j.tmiss++; j.last = { k: 'teach_miss' }; } }
@@ -159,17 +209,19 @@ export function apply(s, a) {
         else { j.misses++; j.last = { k: 'miss', liars: p.liars, safe: p.safe }; j.attempt++; }
         j.asked = {}; j.votes = { A: 0, B: 0 }; }
       break; }
-    case 'kaigi_submit': { const j = J.kaigi; if (j.status !== 'todo' || a.step !== j.step) return false;
-      const jd = a.judge || {}, d = KAIGI[j.step].practice ? 0 : tensionDelta(jd), pass = !!jd.ok && !(jd.taboo && jd.taboo.length);
-      j.tension = Math.max(0, Math.min(100, j.tension + d));
-      j.history.push({ step: j.step, who: a.role, text: String(a.text).slice(0, 120), judge: jd, d, pass });
-      if (!pass && !KAIGI[j.step].practice) j.fails++;
-      if (j.tension >= 100) { j.attempt++; j.step = 1; j.tension = 40; j.history.push({ broken: true }); }
-      else if (pass) { if (KAIGI[j.step].practice) mark(s, 'kaigi0'); j.step++; if (j.step >= KAIGI.length) { j.status = 'done'; mark(s, 'kaigi'); } }
-      break; }
+    // 和平会議. Writer: kaigi_propose (rule check at once; otherwise the hearer says whether the meaning got across) or kaigi_submit (AI judged it).
+    case 'kaigi_propose': { const j = J.kaigi; if (j.status !== 'todo' || a.step !== j.step || j.pending) return false;
+      const st = KAIGI[j.step], text = String(a.text || '').slice(0, 80).trim(); if (text.length < 2 || a.role !== writerOf(st)) return false;
+      const rj = ruleJudge(st, text); if (rj) kaigiResolve(s, text, rj, a.role); else j.pending = { step: j.step, text, by: a.role, id: a.n || 0 }; break; }
+    case 'kaigi_verdict': { const j = J.kaigi, pd = j.pending; if (j.status !== 'todo' || !pd || a.step !== j.step || a.role !== hearerOf(KAIGI[j.step])) return false;
+      if (a.pid !== undefined && a.pid !== pd.id) return false;      // a verdict for a translation that is no longer the one waiting
+      j.pending = null; kaigiResolve(s, pd.text, hearerJudge(KAIGI[j.step], !!a.ok), pd.by); break; }
+    case 'kaigi_submit': { const j = J.kaigi; if (j.status !== 'todo' || a.step !== j.step || j.pending) return false;
+      const st = KAIGI[j.step], text = String(a.text || '').slice(0, 80), jd = ruleJudge(st, text) || { ok: !!(a.judge && a.judge.ok), by: 'ai', reason: String(a.judge?.reason || '').slice(0, 30), reaction: String(a.judge?.reaction || '').slice(0, 40) };
+      kaigiResolve(s, text, jd, a.role); break; }
     case 'skip': { const j = J[a.job]; if (!j || j.status !== 'todo') return false; j.status = 'skip'; mark(s, a.job + '_skip'); break; }
     case 'survey': s.survey[a.role] = a.ans; break;
-    case 'again': { const n = newState(Math.floor(Math.random() * 1e9), s.names); n.tut.step = 2; Object.assign(s, n); break; }
+    case 'again': { const n = newState(Math.floor(Math.random() * 1e9), s.names); n.tut.step = 2; n.seen = s.seen; Object.assign(s, n); break; }
     default: return false;
   }
   if (s.phase === 'work' && allDone(s)) { s.phase = 'end'; s.finishedAt = Date.now(); }
