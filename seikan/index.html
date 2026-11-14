@@ -113,10 +113,12 @@
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
   .tabs{display:flex;gap:6px}.tabs .btn{flex:1}
   .dictrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .dictrow label{display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:0;text-align:center}
+  .dcell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0;min-height:calc(46px * var(--bz,1));padding:2px;border-radius:10px;border:1.5px solid var(--line);background:rgba(8,12,30,.85);color:var(--ink);font:inherit}
+  .dcell b{font-size:14px;font-weight:800;line-height:1.2}.dcell b.none{color:var(--mut)}
+  .pickrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  #frame .pickrow .btn{padding:2px;font-size:14px;min-width:0;white-space:nowrap}
   #frame .dictrow .alien{font-size:15px;white-space:nowrap;letter-spacing:0}
   #frame .dictrow .alien.long{font-size:12.5px}
-  .dictrow select{min-width:0;width:100%;padding:4px 2px!important;-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center;font-size:14px!important}
   .lives{letter-spacing:.2em;color:var(--amber)}
   .bar{height:12px;border-radius:6px;background:rgba(150,175,240,.2);overflow:hidden;width:110px}
   .bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#7be39a,#ffb547 60%,#ff7a6a)}

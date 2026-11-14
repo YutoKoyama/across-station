@@ -416,7 +416,10 @@ function kousinWork(s, me) {
     const uniq = [...new Set(p.lines.flat().concat(p.question).map(w))].filter(x => !known[x]), memoOn = local.tab === 'memo';
     const lhead = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><small style="flex:1;margin:0;font-size:13px;font-weight:800;color:var(--mine)">${MINE}：使者の言葉</small><button class="btn sm" data-tab="${memoOn ? 'reply' : 'memo'}">${memoOn ? '返事にもどる' : '意味メモ'}</button></div>`;
     const body = memoOn
-      ? card('q', '意味のメモ（自分用）', `<div class="dictrow">${uniq.map(x => `<label><span class="alien ${x.length > 3 ? 'long' : ''}">${x}</span><select data-dict="${x}"><option value="">？</option>${Object.values(L.CONCEPTS).map(c => `<option ${local.dict[x] === c.ja ? 'selected' : ''}>${c.ja}</option>`).join('')}</select></label>`).join('')}</div>`)
+      ? (local.memoPick && uniq.includes(local.memoPick)
+        // choosing a meaning: buttons inside the game screen (a phone's own menu would not turn with the rotated screen)
+        ? card('q', `「<span class="alien">${local.memoPick}</span>」の意味は？`, `<div class="pickrow">${Object.values(L.CONCEPTS).map(c => `<button class="btn sm ${local.dict[local.memoPick] === c.ja ? 'on' : ''}" data-pick="${c.ja}">${c.ja}</button>`).join('')}<button class="btn sm" data-pick="">？</button></div>`)
+        : card('q', '意味のメモ（自分用）　語をタップ', `<div class="dictrow">${uniq.map(x => `<button class="dcell" data-dict="${x}"><span class="alien ${x.length > 3 ? 'long' : ''}">${x}</span><b class="${local.dict[x] ? '' : 'none'}">${esc(local.dict[x] || '？')}</b></button>`).join('')}</div>`))
       : card('q', '', `<div class="tiles">${p.tiles.map(k => `<button class="tile ${local.reply.includes(k) ? 'on' : ''}" data-tile="${k}"><span class="alien ${w(k).length > 3 ? 'long' : ''}">${w(k)}<small>${esc(memo(w(k))) || '　'}</small></span>${local.reply.includes(k) ? `<i class="ord">${local.reply.indexOf(k) + 1}</i>` : ''}</button>`).join('')}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm" data-a="kclear" style="flex:1">消す</button><button class="btn main sm ${local.reply.length === 3 && !lock ? 'guide' : ''}" style="flex:2" data-a="ksend" ${local.reply.length === 3 && !lock ? '' : 'disabled'}>${lock ? `あと<span class="lockn">${lock}</span>秒` : '伝える'}</button></div>`);
     return { L: `<div class="card mine">${lhead}<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.question.map(al).join('')}</span></div>` + p.lines.map((l, i) => `<div class="rowline"><b>${i + 1}</b><span>${l.map(al).join('')}</span></div>`).join('') + '</div>', R: fb + body };
@@ -477,7 +480,9 @@ async function onAct(e) {
   if (d.a === 'help') { local.help = true; render(true); return; }
   if (d.a === 'brief') { local.briefSeen[sceneName] = true; local.help = false; render(true); return; }
   if (d.tut) { net.act({ t: 'tut_pick', color: d.tut, role: me }); return; }
-  if (d.tab) { local.tab = d.tab; render(true); return; }
+  if (d.tab) { local.tab = d.tab; local.memoPick = ''; render(true); return; }
+  if (d.dict !== undefined) { local.memoPick = d.dict; render(true); return; }
+  if (d.pick !== undefined) { if (local.memoPick) { if (d.pick) local.dict[local.memoPick] = d.pick; else delete local.dict[local.memoPick]; } local.memoPick = ''; render(true); return; }
   if (d.tile) { const max = s.jobs.kousin.stage === 0 ? 1 : 3, k = d.tile, i = local.reply.indexOf(k);
     if (max === 1) local.reply = [k]; else if (i >= 0) local.reply.splice(i, 1); else if (local.reply.length < max) local.reply.push(k); render(true); return; }
   if (d.a === 'kclear') { local.reply = []; render(true); return; }
@@ -507,7 +512,7 @@ async function onAct(e) {
 }
 for (const id of ['work', 'brief', 'tr']) $(id).addEventListener('click', onAct);
 $('work').addEventListener('input', e => { if (e.target.id === 'kt') local.kaigiText = e.target.value; });
-$('work').addEventListener('change', e => { const d = e.target.dataset; if (d.dict !== undefined) local.dict[d.dict] = e.target.value; if (d.other) { local.other[d.other] = e.target.value; } });
+$('work').addEventListener('change', e => { const d = e.target.dataset; if (d.other) { local.other[d.other] = e.target.value; } });
 
 // ---------------------------------------------------------------- end + survey
 const mmss = ms => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
