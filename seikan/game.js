@@ -16,11 +16,31 @@ const card = (kind, label, body) => `<div class="card ${kind}">${label ? `<small
 const rows = list => list.map((x, i) => `<div class="rowline"><b>${i + 1}</b><span>${x}</span></div>`).join('');
 
 // ---------------------------------------------------------------- layout: always landscape, full screen
+// shrink a box's content (not below min) until it fits its space, so nothing is ever cut off
+function shrink(el, availW, availH, min = 0.74) {
+  if (!el) return 1; el.style.zoom = 1;
+  const w = el.scrollWidth, h = el.scrollHeight; if (!w || !h) return 1;
+  const z = Math.max(min, Math.min(1, availW / w, availH / h)); el.style.zoom = z < 0.995 ? z.toFixed(3) : 1; return z;
+}
+function fitAll() {
+  if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && frame.classList.contains('working')) return;   // the keyboard is up: keep the layout, let it scroll
+  const W = frame.clientWidth, H = frame.clientHeight, tb = $('topbar');
+  if (tb.offsetParent) { tb.style.zoom = 1; const avail = tb.clientWidth; const need = [...tb.children].reduce((a, c) => a + (c.id === 'goal' ? 210 : c.scrollWidth) + 8, 0);
+    tb.style.zoom = need > avail ? Math.max(0.8, avail / need).toFixed(3) : 1; }
+  if (tb.offsetParent) { const r = tb.getBoundingClientRect(); frame.style.setProperty('--wt', Math.round((window.__rotated ? r.width : r.height) + 12) + 'px'); }
+  for (const id of ['wl', 'wr']) { const pane = $(id), f = pane.firstElementChild; if (pane.offsetParent && f) shrink(f, pane.clientWidth, pane.clientHeight - 2); }
+  const eb = $('endbody'); if (eb.offsetParent && eb.firstElementChild) shrink(eb.firstElementChild, eb.clientWidth, eb.clientHeight - 2, 0.66);
+  const lb = $('lobby'); if (lb.offsetParent) { lb.style.zoom = 1; const z = Math.min(1, (H - 16) / lb.offsetHeight, (W * 0.52) / lb.offsetWidth); lb.style.zoom = z < 0.995 ? Math.max(0.6, z).toFixed(3) : 1; }
+  const lg = $('logo'); if (lg.offsetParent) { lg.style.zoom = 1; const lbr = lb.getBoundingClientRect(), lgr = lg.getBoundingClientRect(), room = (window.__rotated ? lbr.top - lgr.top : lbr.left - lgr.left) - 14; const z = Math.min(1, room / lg.scrollWidth); lg.style.zoom = z < 0.995 ? z.toFixed(3) : 1; }
+  const bx = $('brief').querySelector('.box'); if (bx && $('brief').classList.contains('on')) shrink(bx, W * 0.92, H - 16, 0.6);
+  const st = $('intro').querySelector('.stage'); if ($('intro').classList.contains('on')) { $('intro').style.zoom = 1; const z = Math.min(1, (H - 8) / 330, (W - 16) / 470); $('intro').style.zoom = z < 0.995 ? z.toFixed(3) : 1; }
+}
 function layout() {
   const vw = innerWidth, vh = innerHeight, up = vh > vw; window.__rotated = up;
   const W = up ? vh : vw, H = up ? vw : vh;
   Object.assign(frame.style, { width: W + 'px', height: H + 'px', transformOrigin: '0 0', transform: up ? `translate(${vw}px,0) rotate(90deg)` : 'none' });
-  size();
+  frame.classList.toggle('rot', up); frame.classList.toggle('compact', H < 400 || W < 700);
+  size(); requestAnimationFrame(fitAll);
 }
 document.addEventListener('touchmove', e => { if (!e.target.closest('.pane,#endbody')) e.preventDefault(); }, { passive: false });
 
@@ -89,7 +109,7 @@ const INTRO = ['見えるものが、ふたりで違う', '声で伝える', '�
 let introT = 0;
 function playIntro() { const el = $('intro'); let i = 0; el.classList.add('on');
   const show = () => { el.classList.remove('s1', 's2', 's3'); el.classList.add('s' + (i + 1)); $('introCap').textContent = INTRO[i]; el.querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k === i)); $('introGo').classList.toggle('guide', i === 2); };
-  show(); clearInterval(introT); introT = setInterval(() => { i = (i + 1) % 3; show(); }, 2300); }
+  show(); fitAll(); clearInterval(introT); introT = setInterval(() => { i = (i + 1) % 3; show(); }, 2300); }
 $('introGo').addEventListener('click', () => { clearInterval(introT); $('intro').classList.remove('on'); local.introSeen = true; });
 
 // ---------------------------------------------------------------- what to do now (one line, always in the same place)
@@ -110,6 +130,18 @@ function goalText(s, me) {
   if (sceneName === 'bunki') return '案内人に聞き、相棒と同じ安全な扉を選ぼう';
   if (sceneName === 'kaigi') { const st = L.KAIGI[j.step]; return me === L.hearerOf(st) ? '発言の本当の意味を、相棒に声で伝えよう' : '聞いた意味を、禁句を使わずに訳そう'; }
   return '';
+}
+const BADGE = { ans: 'あなたが答える', sup: '相棒をサポート', both: 'ふたりで答える' };
+function roleOf(s, me) {
+  if (sceneName === 'office') { const T = s.tut; if (T.step >= 2) return null;
+    return me === L.tutViewer(T.step) ? { k: 'sup', t: '相棒に「封筒は何色？」が出ている。色を教えよう' } : { k: 'ans', t: '問題：封筒は何色？ 相棒に聞いて、同じ色を押そう' }; }
+  const j = s.jobs[sceneName]; if (!j || j.status !== 'todo' || !partnerHere()) return null;
+  if (sceneName === 'kousin') return me === 'A' ? { k: 'ans', t: j.stage === 0 ? '問題：使者への返事は、2つの言葉のどっち？' : '問題：使者の問いかけに、3語で返事を組もう' }
+    : { k: 'sup', t: j.stage === 0 ? '相棒が返事の言葉を選ぶ。しぐさと返事の意味を教えよう' : '相棒が返事を組む。返事の中身としぐさを教えよう' };
+  if (sceneName === 'bunki') return { k: 'both', t: '問題：安全な扉は1〜3番のどれ？ 案内人に聞いて、同じ扉を選ぼう' };
+  if (sceneName === 'kaigi') { const st = L.KAIGI[j.step];
+    return me === L.writerOf(st) ? { k: 'ans', t: `問題：${L.CULTURE[st.from].boss}の発言を、${L.CULTURE[st.to].name}を怒らせずに訳そう` } : { k: 'sup', t: `相棒が訳を書く。${L.CULTURE[st.from].boss}の発言の意味を教えよう` }; }
+  return null;
 }
 const HINT = {
   kousin0: { A: '相棒に「1つ目と2つ目のしぐさは？」と聞いてみよう', B: 'しぐさを順に読み上げ、「返事は何番目の言葉」と伝えよう' },
@@ -138,11 +170,14 @@ function render(force) {
   if (!force && key === lastKey) return; lastKey = key;
   if (working && !frame.classList.contains('working')) workSince = now;
   frame.classList.toggle('working', working); frame.classList.toggle('ended', ended); window.__freeze = working || ended;
-  if (sceneName === 'title') { renderLobby(); return; }
+  if (sceneName === 'title') { renderLobby(); fitAll(); return; }
   if (!s) return;
   // top bar
   $('role').innerHTML = `<i style="background:${ROLE[me].css}">${me}</i>あなた＝${esc(nameOf(s, me))}`;
-  $('goalText').textContent = ended ? 'おつかれさまでした' : goalText(s, me);
+  const ro = working ? roleOf(s, me) : null, gl = $('goal');
+  gl.className = 'plate ' + (ro ? ro.k : '');
+  const hint = working && stuck && sceneName !== 'office' ? hintText(s, me) : '';
+  gl.innerHTML = ro ? `<span class="badge ${ro.k}">${BADGE[ro.k]}</span><span><span class="gt">${esc(ro.t)}</span>${hint ? `<span class="hintline">ヒント：${esc(hint)}</span>` : ''}</span>` : `<small>いまの目標</small><span>${esc(ended ? 'おつかれさまでした' : goalText(s, me))}</span>`;
   const other = me === 'A' ? 'B' : 'A', p = net.partner;
   const chip = net.solo ? `<button class="btn" data-a="swap">${other}の画面を見る</button>` : `<i style="background:${ROLE[other].css}">${other}</i>${esc(nameOf(s, other))}<em>${p ? NAMES[p.scene] || '' : '未接続'}</em>`;
   let tr = chip;
@@ -152,6 +187,7 @@ function render(force) {
   const co = $('coach'); co.classList.toggle('on', coach > 0); co.textContent = coach === 1 ? '← なぞって歩く' : 'なぞって見回す'; $('stick').classList.toggle('guide', coach === 1);
   if (working) renderWork(s, me, stuck);
   if (ended) renderEnd();
+  fitAll();
 }
 
 // ---------------------------------------------------------------- lobby
@@ -204,9 +240,8 @@ function renderWork(s, me, stuck) {
     if (j.status !== 'todo') v = { L: card('', '', `<div class="stamp" style="display:inline-block">${j.status === 'done' ? '業務完了' : 'スキップ'}</div>`), R: `<button class="btn main guide" data-a="plaza">広場へ戻る</button>` };
     else if (!partnerHere()) v = { L: card('wait', '', `相棒を待っています。「<b>${NAMES[sceneName]}</b>に来て」と呼ぼう`), R: '' };
     else v = ({ kousin: kousinWork, bunki: bunkiWork, kaigi: kaigiWork })[sceneName](s, me);
-    if (j.status === 'todo' && partnerHere()) { const h = stuck ? hintText(s, me) : ''; if (h) v.R = `<div class="msg hint">ヒント：${h}</div>` + v.R; }
   }
-  wl.innerHTML = v.L; wr.innerHTML = v.R; wl.scrollTop = st[0]; wr.scrollTop = st[1];
+  wl.innerHTML = `<div class="fit">${v.L}</div>`; wr.innerHTML = `<div class="fit">${v.R}</div>`; wl.scrollTop = st[0]; wr.scrollTop = st[1];
   const kt = $('kt'); if (kt) { kt.value = keep; if (focus) kt.focus(); }
   // briefing: once per job, and again from the "？" button
   const B = BRIEF[sceneName], show = B && s.jobs[sceneName].status === 'todo' && partnerHere() && local.help, br = $('brief');
@@ -222,8 +257,8 @@ function tutWork(s, me) {
   if (T.step >= 2) return { L: card('', 'この仕事のきまり', rows(['見えているものは、ふたりで違う', '声で伝え合う（画面は見せない）', '決められるのは、どちらか片方'])), R: `<div class="stamp">研修完了</div><button class="btn main guide" data-a="plaza">広場へ出る</button>` };
   const viewer = L.tutViewer(T.step), tgt = L.TUT.find(c => c.k === L.tutTarget(s.seed, T.step));
   const fb = T.last === 'miss' ? `<div class="msg bad">ちがう色。もう一度聞こう</div>` : T.step === 1 ? `<div class="msg ok">正解！ 役を交代</div>` : '';
-  if (me === viewer) return { L: card('mine', MINE, `<div style="display:flex;align-items:center;gap:14px">${envelope(tgt.css)}<div><b>この色（${tgt.ja}）</b>を伝える</div></div>`), R: fb + card('wait', '', '押すのは相棒') };
-  return { L: card('', '', '封筒は相棒の画面にある。<b>「何色？」</b>と聞く'), R: fb + `<div class="grid2">${L.TUT.map(c => `<button class="swatch guide" style="background:${c.css}" data-tut="${c.k}">${c.ja}</button>`).join('')}</div>` };
+  if (me === viewer) return { L: card('mine', MINE + '：答えの手がかり', `<div style="display:flex;align-items:center;gap:14px">${envelope(tgt.css)}<div>封筒の色は<b>${tgt.ja}</b></div></div>`), R: fb + card('sup', 'あなたはサポート役', '相棒が「封筒は何色？」に答える。<br><b>この色を声で教えよう</b>') };
+  return { L: card('q', '問題', '封筒は何色？<br><span style="font-size:14px;color:var(--mut)">封筒は相棒にだけ見えている。「何色？」と聞こう</span>'), R: fb + `<div style="font-size:13px;font-weight:800;color:var(--amber)">あなたの答え</div><div class="grid2">${L.TUT.map(c => `<button class="swatch guide" style="background:${c.css}" data-tut="${c.k}">${c.ja}</button>`).join('')}</div>` };
 }
 
 // 交信室 ---------------------------------------------------------------
@@ -236,23 +271,23 @@ function kousinWork(s, me) {
   if (j.stage === 0) {
     const fb = j.last === 'teach_miss' ? `<div class="msg bad">使者は首をかしげた。相棒にもう一度聞こう</div>` : '';
     if (me === 'A') return { L: card('mine', MINE + '：使者の言葉', rows(p.teach.order.map(k => `<span class="alien">${w(k)}</span>`))),
-      R: fb + card('', '返事をえらぶ', `<div class="tiles">${p.teach.order.map(k => `<button class="tile ${local.reply[0] === k ? 'on' : local.reply.length ? '' : 'guide'}" data-tile="${k}"><span class="alien">${w(k)}</span></button>`).join('')}</div>`) + `<button class="btn main ${local.reply.length === 1 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 1 ? '' : 'disabled'}>返事する</button>` };
-    return { L: card('mine', MINE + '：使者のしぐさ', rows(p.teach.order.map(k => L.CONCEPTS[k].gesture))) + card('tell', TELL, `返事は<b>「${L.CONCEPTS[p.teach.target].ja}」</b>の言葉。何番目？`),
-      R: fb + card('wait', '', '押すのは相棒') };
+      R: fb + card('q', '問題：使者への返事は、どっちの言葉？', `<div class="tiles">${p.teach.order.map(k => `<button class="tile ${local.reply[0] === k ? 'on' : local.reply.length ? '' : 'guide'}" data-tile="${k}"><span class="alien">${w(k)}</span></button>`).join('')}</div>`) + `<button class="btn main ${local.reply.length === 1 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 1 ? '' : 'disabled'}>返事する</button>` };
+    return { L: card('mine', MINE + '：使者のしぐさ', rows(p.teach.order.map(k => L.CONCEPTS[k].gesture))),
+      R: fb + card('sup', 'あなたはサポート役', `相棒が、返事の言葉を2つから選ぶ。<br>返事は<b>「${L.CONCEPTS[p.teach.target].ja}」</b>の言葉。<b>何番目か</b>教えよう`) };
   }
   const fb = j.last === 'teach_ok' ? `<div class="msg ok">通じた！ 次は3語で返事</div>` : j.last === 'miss' ? `<div class="msg bad">通じなかった。並べ方を確かめよう</div>` : j.last === 'reset' ? `<div class="msg bad">使者が交代した。言葉も新しくなった</div>` : '';
   const left = j.misses % 3;
   if (me === 'A') {
     const uniq = [...new Set(p.lines.flat().concat(p.question).map(w))].filter(x => !known[x]);
-    const tabs = `<div class="tabs"><button class="btn sm ${local.tab === 'reply' ? 'on' : ''}" data-tab="reply">返事を組む</button><button class="btn sm ${local.tab === 'memo' ? 'on' : ''}" data-tab="memo">辞書メモ</button></div>`;
+    const tabs = '', head = (t, other) => `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><small style="flex:1;font-size:12px;font-weight:800;color:var(--amber)">${t}</small><button class="btn sm" data-tab="${other}">${other === 'memo' ? '意味メモ' : '返事にもどる'}</button></div>`;
     const body = local.tab === 'memo'
-      ? card('', '意味のメモ', `<div class="dictrow">${uniq.map(x => `<span class="alien">${x}</span><select data-dict="${x}"><option value="">？</option>${Object.values(L.CONCEPTS).map(c => `<option ${local.dict[x] === c.ja ? 'selected' : ''}>${c.ja}</option>`).join('')}</select>`).join('')}</div>`)
-      : card('', `3語を順にタップ　のこり ${lives(left)}`, `<div class="tiles">${p.tiles.map(k => `<button class="tile ${local.reply.includes(k) ? 'on' : ''}" data-tile="${k}"><span class="alien">${w(k)}<small>${esc(memo(w(k))) || '　'}</small></span></button>`).join('')}</div>
+      ? card('q', '', head('意味のメモ（自分用）', 'reply') + `<div class="dictrow">${uniq.map(x => `<span class="alien">${x}</span><select data-dict="${x}"><option value="">？</option>${Object.values(L.CONCEPTS).map(c => `<option ${local.dict[x] === c.ja ? 'selected' : ''}>${c.ja}</option>`).join('')}</select>`).join('')}</div>`)
+      : card('q', '', head(`問題：3語で返事　のこり ${lives(left)}`, 'memo') + `<div class="tiles">${p.tiles.map(k => `<button class="tile ${local.reply.includes(k) ? 'on' : ''}" data-tile="${k}"><span class="alien">${w(k)}<small>${esc(memo(w(k))) || '　'}</small></span></button>`).join('')}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><span class="alien" style="flex:1;color:var(--amber);font-size:17px">${local.reply.map(w).join(' ') || '返事：……'}</span><button class="btn sm" data-a="kclear">消す</button><button class="btn main sm ${local.reply.length === 3 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 3 ? '' : 'disabled'}>伝える</button></div>`);
     return { L: card('mine', MINE + '：使者の言葉', '' + p.lines.map((l, i) => `<div class="rowline"><b>${i + 1}</b><span>${l.map(al).join('')}</span></div>`).join('') + `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.question.map(al).join('')}</span></div>`), R: fb + tabs + body };
   }
   return { L: card('mine', MINE + '：使者のしぐさ（順番はバラバラ）', '' + p.gestures.slice(0, 3).map((g, i) => `<div class="rowline"><b>${i + 1}</b><span>${g.map(k => L.CONCEPTS[k].gesture).join('　／　')}</span></div>`).join('') + `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.gestures[3].map(k => L.CONCEPTS[k].gesture).join('　／　')}</span></div>`),
-    R: fb + card('tell', TELL, `返事：<b>「わたし」「食べ物」「あげる」</b><br>並べ方は使者の文と同じ`) + card('wait', '', `組むのは相棒　のこり ${lives(left)}`) };
+    R: fb + card('sup', `あなたはサポート役　（相棒ののこり ${lives(left)}）`, `相棒が返事を3語で組む。教えること：<br>① 返事の中身は<b>「わたし」「食べ物」「あげる」</b><br>② 左のしぐさで、言葉の意味と並び順`) };
 }
 
 // 分岐路 ---------------------------------------------------------------
@@ -269,8 +304,8 @@ function bunkiWork(s, me) {
       + (left > 0 ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button class="btn sm ${asked.length ? '' : 'guide'}" data-ask="${g}|door">安全な扉は？</button>${j.stage === 1 ? `<span style="display:inline-flex;gap:4px"><select data-other="${g}">${others.map(x => `<option value="${x}" ${x === sel ? 'selected' : ''}>${L.GUIDES[x].name}</option>`).join('')}</select><button class="btn sm" data-ask="${g}|honest">は正直？</button></span>` : ''}</div>` : ''));
   }
   const v = j.votes, allAsked = Object.keys(L.GUIDES).filter(g => L.GUIDES[g].who === me).every(g => (j.asked[g] || []).length);
-  const Rh = fb + (me === 'B' ? card('mine', MINE + '：この階の決まり', L.BUNKI_RULE(p)) : card('wait', '', '<b>うその決まり</b>は相棒が知っている'))
-    + card('', 'ふたりで同じ扉をえらぶ', `<div class="grid3">${[1, 2, 3].map(n => `<button class="btn ${v[me] === n ? 'on' : allAsked && !v[me] ? 'guide' : ''}" data-door="${n}">扉 ${n}</button>`).join('')}</div>
+  const Rh = fb + (me === 'B' ? card('sup', MINE + '：この階の決まり（相棒にも教えよう）', L.BUNKI_RULE(p)) : card('wait', '', '<b>うその決まり</b>は相棒が知っている。聞いてみよう'))
+    + card('q', '問題：安全な扉は？（ふたりが同じ扉で決定）', `<div class="grid3">${[1, 2, 3].map(n => `<button class="btn ${v[me] === n ? 'on' : allAsked && !v[me] ? 'guide' : ''}" data-door="${n}">扉 ${n}</button>`).join('')}</div>
       <div style="margin-top:6px;font-size:14px;color:var(--mut)">${net.solo ? `${o}の選択：${v[o] ? '扉' + v[o] : 'まだ'}` : `${esc(nameOf(s, o))}：${v[o] ? '扉' + v[o] + 'を選んでいる' : 'まだ選んでいない'}`}</div>`);
   return { L: Lh, R: Rh };
 }
@@ -280,14 +315,14 @@ function kaigiWork(s, me) {
   const j = s.jobs.kaigi, st = L.KAIGI[j.step], hearer = L.hearerOf(st), cult = Object.values(L.CULTURE).find(c => c.side === me), from = L.CULTURE[st.from], to = L.CULTURE[st.to];
   const hist = j.history.filter(x => !x.broken), last = j.history[j.history.length - 1];
   const res = !last ? '' : last.broken ? `<div class="msg bad">会談が決裂した……。最初の議題からやり直し</div>`
-    : `<div class="msg ${last.pass ? 'ok' : 'bad'}">${last.pass ? '伝わった' : '伝わらなかった'}（緊張度 ${last.d > 0 ? '+' : ''}${last.d}）<br><span style="font-weight:500">訳「${esc(last.text)}」<br>理由：${esc(last.judge.reason || '')}　${esc(last.judge.reaction || '')}</span>${last.pass ? '' : '<br>もう一度訳せる'}</div>`;
-  const step = `<div style="font-size:13px;color:var(--mut)">議題 ${j.step + 1} / ${L.KAIGI.length}　${hist.length ? '' : '（緊張度100%で決裂）'}</div>`;
+    : `<div class="msg ${last.pass ? 'ok' : 'bad'}">${last.pass ? '伝わった' : '伝わらなかった・もう一度'}（緊張度 ${last.d > 0 ? '+' : ''}${last.d}）<br><span style="font-weight:500">${esc(last.judge.reason || '')}　${esc(last.judge.reaction || '')}</span></div>`;
+  const step = `<div style="font-size:12px;color:var(--mut)">議題 ${j.step + 1} / ${L.KAIGI.length}（緊張度100%で決裂）</div>`;
   if (me === hearer) return {
     L: card('mine', `${MINE}：${from.boss}の発言`, `「${esc(st.text)}」`) + card('mine', `${MINE}：言い回しメモ`, cult.idioms.map(([a, b]) => `<div class="rowline"><span>「${a}」＝ <b style="all:unset;font-weight:800;color:var(--mine)">${b}</b></span></div>`).join('')),
-    R: res + step + card('tell', TELL, '発言の<b>本当の意味</b>') + card('wait', '', '訳すのは相棒') };
+    R: res + step + card('sup', 'あなたはサポート役', `相棒が${to.name}向けに訳を書く。<br>左のメモで読み解いて、発言の<b>本当の意味</b>をふつうの言葉で教えよう`) };
   return {
-    L: card('', '', `${from.boss}が発言した。<b>相棒に意味を聞く</b>`) + card('warn', `${MINE}：${cult.name}の禁句`, `<span style="font-size:26px;font-weight:800;color:var(--red);letter-spacing:.3em">${cult.taboo.join(' ')}</span><br>訳に入れると怒る`),
-    R: res + step + `<div style="display:flex;gap:8px;align-items:stretch">${dictApi && !local.noMic ? `<button class="btn ${local.listening ? 'teal' : ''}" data-a="mic" style="flex:none">${local.listening ? '話し終えた' : '声で入力'}</button>` : ''}<textarea id="kt" class="${local.kaigiText ? '' : 'guide'}" rows="2" maxlength="80" placeholder="${cult.name}への訳" style="flex:1"></textarea></div>
+    L: card('q', '問題', `${from.boss}の発言を、${to.name}を怒らせない言葉に訳そう。<br><span style="font-size:14px;color:var(--mut)">発言の意味は相棒が知っている。聞いてみよう</span>`) + card('warn', `${MINE}：${cult.name}の禁句`, `<span style="font-size:26px;font-weight:800;color:var(--red);letter-spacing:.3em">${cult.taboo.join(' ')}</span><br>訳に入れると怒る`),
+    R: res + step + `<div style="font-size:13px;font-weight:800;color:var(--amber)">あなたの答え（訳）</div><div style="display:flex;gap:8px;align-items:stretch">${dictApi && !local.noMic ? `<button class="btn ${local.listening ? 'teal' : ''}" data-a="mic" style="flex:none">${local.listening ? '話し終えた' : '声で入力'}</button>` : ''}<textarea id="kt" class="${local.kaigiText ? '' : 'guide'}" rows="2" maxlength="80" placeholder="${cult.name}への訳" style="flex:1"></textarea></div>
       <button class="btn main" data-a="ksubmit" ${local.busy ? 'disabled' : ''}>${local.busy ? to.name + 'が協議中…' : 'この訳を伝える'}</button>` };
 }
 
@@ -349,7 +384,7 @@ function renderEnd() {
     ${card('', 'ひとことアンケート', Q.map(([k, q]) => `<div>${q}</div><div class="ans">${['はい', 'いいえ'].map(a => `<button class="btn sm ${mine[k] === a ? 'on' : ''}" data-q="${k}|${a}">${a}</button>`).join('')}</div>`).join('')
       + `<div>いちばん面白かった仕事は？</div><div class="ans">${L.JOBS.map(k => `<button class="btn sm ${mine.best === k ? 'on' : ''}" data-q="best|${k}">${NAMES[k]}</button>`).join('')}</div>`)}`;
   if (s.survey.A && s.survey.B) h += `<div class="msg ok" style="margin-top:6px">ふたりとも回答しました。この画面をスクショして送ってください。</div>` + ['A', 'B'].map(r => `<div style="font-size:13px">${esc(s.names[r])}：また遊びたい ${s.survey[r].again || '－'}／楽しい ${s.survey[r].talk || '－'}／疲れた ${s.survey[r].tired || '－'}／一番 ${NAMES[s.survey[r].best] || '－'}</div>`).join('');
-  $('endbody').innerHTML = h + '</div></div>';
+  $('endbody').innerHTML = `<div class="fit">${h}</div></div></div>`;
 }
 $('endbody').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset.q; if (!d) return;
@@ -378,4 +413,6 @@ function tick() {
   requestAnimationFrame(tick);
 }
 layout(); loadScene('title'); tick();
+document.fonts && document.fonts.ready.then(() => fitAll());
+window.__local = local; window.__fit = fitAll;
 window.__net = net; window.__L = L;
