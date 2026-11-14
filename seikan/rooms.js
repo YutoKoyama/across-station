@@ -157,7 +157,7 @@ export function kaigi(S) {
     player: me, other: aya, lookAhead: 4.5, lookUp: 0.2, actLabel: null,
     walk: { ground: (x, z) => inRoom(x, z) && !inCircle(x, z, 0, -4, 4.1) && ![...left, ...right].some(o => inCircle(x, z, o.position.x, o.position.z, 1.2)) && !inBox(x, z, -6.5, -7.5, 0.3, 0.3) && !inBox(x, z, 6.5, -7.5, 0.3, 0.3) ? 0 : null,
       interact: (x, z) => Math.hypot(x, z - 12) < 3 ? { label: '広場へ', go: () => { window.__goScene('plaza'); } } : null },
-    tags: [{ pos: new THREE.Vector3(-4.9, 3.0, -4.0), html: '<small>クリル族の代表</small>ハサ長老', col: '#f08a6a' }, { pos: new THREE.Vector3(4.9, 3.4, -4.0), html: '<small>グラ族の代表</small>モス議長', col: '#8cc48a' }],
+    tags: [{ pos: new THREE.Vector3(-4.9, 3.0, -4.0), html: '<small>クリル族の代表</small>ハサ長老', col: '#f08a6a', group: [[-4.4, -6.4], [-2.6, -8.3]] }, { pos: new THREE.Vector3(4.9, 3.4, -4.0), html: '<small>グラ族の代表</small>モス議長', col: '#8cc48a', group: [[4.4, -6.4], [2.6, -8.3]] }],
     update(t) { orb.scale.setScalar(1 + Math.sin(t * 2.4) * 0.06); left.forEach((k, i) => k.position.y = Math.abs(Math.sin(t * 1.8 + i)) * 0.04); right.forEach((g, i) => g.rotation.z = Math.sin(t * 0.9 + i) * 0.03); },
   };
 }

@@ -92,6 +92,8 @@ const lastRoom = () => { try { const r = JSON.parse(localStorage.getItem(KEY + '
 const saveRoom = (code, role) => { try { localStorage.setItem(KEY + 'last', JSON.stringify({ code, role, t: Date.now() })); } catch (e) {} };
 let myName = (() => { try { return localStorage.getItem(KEY + 'name') || ''; } catch (e) { return ''; } })();
 let lobby = { step: 'start', err: '' };
+export const VER = '11/15-4';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
+$('logo').insertAdjacentHTML('beforeend', `<p class="ver">版 ${VER}</p>`);
 const local = { dict: {}, reply: [], kaigiText: '', busy: false, survey: {}, other: {}, asking: '', listening: false, noMic: false, tab: 'reply', briefSeen: {}, help: false,
   walked: false, walk0: null, sceneAt: 0, lastSig: '', lastChange: 0, seedSeen: undefined, khLen: 0 };
 let sampleApi = null, dictApi = null;
@@ -334,14 +336,41 @@ function talkNext(skip) {
   if (!skip && talk.i < talk.n - 1) { talk.i++; talkLine(); return; }
   clearInterval(talk.timer); local.briefSeen[sceneName] = true; talk.key = ''; local.lastChange = performance.now(); render(true);
 }
-function talkPlace() {   // put the bubble beside whoever is speaking
+// put the bubble where it covers nobody: every character on screen (the aliens, both players) becomes a box,
+// and the bubble takes the free spot nearest the one who is speaking (the speaker's box counts the most)
+const _bx = new THREE.Box3(), _v = new THREE.Vector3();
+function screenBox(pts, W, H) { let l = 1e9, r = -1e9, t = 1e9, b = -1e9, any = false;
+  for (const p of pts) { _v.copy(p).project(cam); if (_v.z > 1) continue; any = true; const x = (_v.x + 1) / 2 * W, y = (1 - _v.y) / 2 * H; l = Math.min(l, x); r = Math.max(r, x); t = Math.min(t, y); b = Math.max(b, y); }
+  return any ? { l, r, t, b } : null; }
+function charBoxes(W, H) {
+  const out = [];
+  for (const tg of (sc && sc.tags) || []) { const { x, y, z } = tg.pos, w = Math.max(1.1, 0.4 * y), h = y - 0.6, pts = [];   // the speaker and the rest of their party
+    for (const [px, pz] of [[x, z]].concat(tg.group || [])) pts.push(new THREE.Vector3(px - w, 0, pz), new THREE.Vector3(px + w, 0, pz), new THREE.Vector3(px - w, h, pz), new THREE.Vector3(px + w, h, pz), new THREE.Vector3(px, 0, pz - w), new THREE.Vector3(px, 0, pz + w));
+    out.push(screenBox(pts, W, H)); }
+  for (const o of [sc && sc.player, sc && sc.other]) if (o && o.visible !== false) { _bx.setFromObject(o); if (_bx.isEmpty()) continue; const m = _bx.min, M = _bx.max;
+    out.push(screenBox([0, 1, 2, 3, 4, 5, 6, 7].map(i => new THREE.Vector3(i & 1 ? M.x : m.x, i & 2 ? M.y : m.y, i & 4 ? M.z : m.z)), W, H)); }
+  return out.map(r => r && { l: r.l - 6, r: r.r + 6, t: r.t - 6, b: r.b + 6 });
+}
+const ovl = (a, b) => b ? Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t)) : 0;
+let bubPick = null;
+function talkPlace() {
   if (!frame.classList.contains('talking')) return;
   const b = $('bub'), who = +b.dataset.who, W = frame.clientWidth, H = frame.clientHeight, bw = b.offsetWidth, bh = b.offsetHeight;
-  const tg = (sc && sc.tags || [])[who]; let x = W * 0.5 - bw / 2, y = H * 0.3, side = 'n';
-  if (tg) { const v = tg.pos.clone(); v.y -= 0.8; v.project(cam); const px = (v.x + 1) / 2 * W, py = (1 - v.y) / 2 * H;
-    if (v.z < 1) { side = px < W / 2 ? 'r' : 'l'; x = side === 'r' ? px + 56 : px - 56 - bw; y = py - 40; } }
-  x = Math.max(10, Math.min(W - bw - 10, x)); y = Math.max(56, Math.min(H - bh - 50, y));
-  b.classList.remove('r', 'l', 'n'); b.classList.add(side); b.style.left = x + 'px'; b.style.top = y + 'px';
+  const boxes = charBoxes(W, H), nTag = ((sc && sc.tags) || []).length, sp = who >= 0 && who < nTag ? boxes[who] : null;
+  const top = 56, bot = H - 54, lo = 10, hi = W - bw - 10, clampY = y => Math.max(top, Math.min(bot - bh, y)), clampX = x => Math.max(lo, Math.min(hi, x));
+  const cands = [];
+  for (const fy of [0, 0.25, 0.5, 0.75, 1]) { const y = top + (bot - bh - top) * fy;
+    for (const fx of [0, 0.25, 0.5, 0.75, 1]) cands.push({ x: lo + (hi - lo) * fx, y }); }
+  if (sp) { const cy = clampY((sp.t + sp.b) / 2 - bh / 2); cands.push({ x: clampX(sp.r + 14), y: cy }, { x: clampX(sp.l - 14 - bw), y: cy }); }
+  const cost = c => { const r = { l: c.x, r: c.x + bw, t: c.y, b: c.y + bh }; let k = 0;
+    boxes.forEach((o, i) => { k += ovl(r, o) * (i === who ? 6 : 1); });
+    if (sp) k += Math.hypot(c.x + bw / 2 - (sp.l + sp.r) / 2, c.y + bh / 2 - (sp.t + sp.b) / 2) * 3;   // stay near the speaker
+    return k; };
+  let best = null, bc = Infinity; for (const c of cands) { const k = cost(c); if (k < bc) { bc = k; best = c; } }
+  if (bubPick && bubPick.who === who && bubPick.W === W && cost(bubPick) <= bc * 1.15 + 50) best = bubPick;   // do not jump around for small gains
+  bubPick = { x: best.x, y: best.y, who, W };
+  let side = 'n'; if (sp) { if (best.x >= sp.r - 4) side = 'r'; else if (best.x + bw <= sp.l + 4) side = 'l'; }
+  b.classList.remove('r', 'l', 'n'); b.classList.add(side); b.style.left = Math.round(best.x) + 'px'; b.style.top = Math.round(best.y) + 'px';
 }
 $('talk').addEventListener('click', e => { const t = e.target.closest('[data-t]'); talkNext(t && t.dataset.t === 'skip'); });
 
@@ -380,11 +409,12 @@ function renderWork(s, me, stuck) {
   const B = BRIEF[sceneName], show = B && s.jobs[sceneName].status === 'todo' && partnerHere() && local.help, br = $('brief');
   br.classList.toggle('on', !!show);
   if (show) { const M = B[me], rb = RB[M.k];
-    br.innerHTML = `<div class="box plate"><h2>${NAMES[sceneName]}　${JOBSUB[sceneName]}</h2><p>目標：${B.goal}</p>
+    const html = `<div class="box plate"><h2>${NAMES[sceneName]}　${JOBSUB[sceneName]}</h2><p>目標：${B.goal}</p>
       <div class="cols"><div><span class="rb ${rb[0]}">${rb[1]}</span><h3>まずやること</h3><ol>${M.first.map(x => `<li>${x.replace('{J}', sampleApi ? '' : '。伝わったかはサポート役が判定')}</li>`).join('')}</ol></div>
       <div><h3 style="margin-top:4px">ルール</h3><ul>${B.rules.map(x => `<li>${x}</li>`).join('')}</ul></div></div>
       <div class="prac">${B.prac}</div>
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><span style="flex:1;font-size:13px;color:var(--mut)">画面は見せ合わず、声で伝え合う</span>${local.help ? '<button class="btn sm" data-a="skip">この仕事をスキップ</button>' : ''}<button class="btn main guide" data-a="brief">${local.help ? 'もどる' : 'はじめる'}</button></div></div>`; }
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><span style="flex:1;font-size:13px;color:var(--mut)">画面は見せ合わず、声で伝え合う</span>${local.help ? '<button class="btn sm" data-a="skip">この仕事をスキップ</button>' : ''}<button class="btn main guide" data-a="brief">${local.help ? 'もどる' : 'はじめる'}</button></div></div>`;
+    if (br.dataset.html !== html) { br.innerHTML = html; br.dataset.html = html; } }   // rebuild only when it changed: a rebuild between finger-down and finger-up loses the tap
 }
 const envelope = css => `<svg width="92" height="66" viewBox="0 0 92 66" style="flex:none"><rect x="2" y="2" width="88" height="62" rx="8" fill="${css}" stroke="#fff" stroke-width="3"/><path d="M4 6 L46 38 L88 6" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>`;
 function tutWork(s, me) {
