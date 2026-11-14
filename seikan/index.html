@@ -171,6 +171,15 @@
   #brief .box{transform-origin:50% 50%;width:min(560px,86%);padding:16px 18px;background:var(--solid);border-radius:16px}
   #brief h2{margin:0 0 4px;font-size:22px}
   #brief p{margin:4px 0 10px;font-size:17px;font-weight:800;color:var(--amber)}
+  #brief .cols{display:flex;gap:10px} #brief .cols>div{flex:1;min-width:0}
+  #brief h3{margin:0 0 4px;font-size:13px;font-weight:800;color:var(--mut)}
+  #brief ol,#brief ul{margin:0;padding-left:20px;font-size:15px;line-height:1.5;font-weight:700}
+  #brief ol li::marker{color:var(--amber);font-weight:800}
+  #brief .rb{display:inline-block;font-size:13px;font-weight:800;padding:3px 10px;border-radius:999px;margin-bottom:6px}
+  #brief .rb.ans{background:var(--amber);color:#1a1300} #brief .rb.sup{background:var(--mine);color:#06122e} #brief .rb.both{background:var(--teal);color:#04241f}
+  #brief .prac{margin-top:8px;font-size:14px;font-weight:800;color:var(--teal)}
+  .pbadge{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--teal);color:#04241f;margin-right:6px;vertical-align:1px}
+  #role{display:none!important}
   #end{inset:0;padding:var(--wt,58px) calc(10px + var(--sr)) calc(8px + var(--sb)) calc(10px + var(--sl));display:none;z-index:5;background:rgba(7,10,26,.96);box-sizing:border-box}
   #frame.ended #end{display:block}
   #frame.ended #work{display:none!important}

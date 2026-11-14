@@ -91,6 +91,7 @@ export const CULTURE = {
     taboo: ['根', '抜', '枯'], why: 'よその者が口にすると侮辱になるから' },
 };
 export const KAIGI = [
+  { from: 'gura', to: 'krill', text: '日なたを分けてくれぬか。', meaning: '協力してほしい', keys: ['協力', '助け', '手伝', '一緒', '力を', '手を'], practice: true },
   { from: 'krill', to: 'gura', text: '砂をかけられた件、われらの殻はまだ乾いておらぬ。', meaning: '侮辱されたことを、まだ怒っている', keys: ['怒', '許', '不満', '侮辱', '腹', '納得'] },
   { from: 'gura', to: 'krill', text: 'あの件は葉を重ねて償いたい。日なたを分けてはくれぬか。', meaning: '約束して償うので、協力してほしい', keys: ['約束', '償', '協力', '助け', '手を'] },
   { from: 'krill', to: 'gura', text: '潮が満ちるまで待とう。だが二度と砂はかけるな。', meaning: '急がずに受け入れる。ただし二度と侮辱しないこと', keys: ['待', '受け入れ', '時間', '二度と', '侮辱'] },
@@ -159,12 +160,12 @@ export function apply(s, a) {
         j.asked = {}; j.votes = { A: 0, B: 0 }; }
       break; }
     case 'kaigi_submit': { const j = J.kaigi; if (j.status !== 'todo' || a.step !== j.step) return false;
-      const jd = a.judge || {}, d = tensionDelta(jd), pass = !!jd.ok && !(jd.taboo && jd.taboo.length);
+      const jd = a.judge || {}, d = KAIGI[j.step].practice ? 0 : tensionDelta(jd), pass = !!jd.ok && !(jd.taboo && jd.taboo.length);
       j.tension = Math.max(0, Math.min(100, j.tension + d));
       j.history.push({ step: j.step, who: a.role, text: String(a.text).slice(0, 120), judge: jd, d, pass });
-      if (!pass) j.fails++;
-      if (j.tension >= 100) { j.attempt++; j.step = 0; j.tension = 40; j.history.push({ broken: true }); }
-      else if (pass) { j.step++; if (j.step >= KAIGI.length) { j.status = 'done'; mark(s, 'kaigi'); } }
+      if (!pass && !KAIGI[j.step].practice) j.fails++;
+      if (j.tension >= 100) { j.attempt++; j.step = 1; j.tension = 40; j.history.push({ broken: true }); }
+      else if (pass) { if (KAIGI[j.step].practice) mark(s, 'kaigi0'); j.step++; if (j.step >= KAIGI.length) { j.status = 'done'; mark(s, 'kaigi'); } }
       break; }
     case 'skip': { const j = J[a.job]; if (!j || j.status !== 'todo') return false; j.status = 'skip'; mark(s, a.job + '_skip'); break; }
     case 'survey': s.survey[a.role] = a.ans; break;
