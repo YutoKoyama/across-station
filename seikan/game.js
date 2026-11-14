@@ -247,7 +247,7 @@ function renderLobby() {
       ${lobby.err ? `<div class="msg bad">${esc(lobby.err)}</div>` : `<div class="note">通話しながら遊びます</div>`}`;
   } else { const p = net.partner;
     el.innerHTML = `<div class="note">${net.role === 'A' ? 'このコードを相手に伝えよう' : '参加しました'}</div><div class="code">${esc(net.code)}</div>
-      <div class="msg ${p ? 'ok' : net.status === 'noroom' || net.status === 'busy' ? 'bad' : 'wait'}">${p ? `${esc(p.name || '相手')}さんが来ました` : net.status === 'noroom' ? 'その部屋が見つかりません。コードを確かめよう（自動で探し続けます）' : net.status === 'busy' ? '部屋を準備しています…' : '相手を待っています…'}</div>
+      <div class="msg ${p ? 'ok' : net.status === 'noroom' || net.status === 'busy' || net.status === 'full' ? 'bad' : 'wait'}">${p ? `${esc(p.name || '相手')}さんが来ました` : net.status === 'noroom' ? 'その部屋が見つかりません。コードを確かめよう（自動で探し続けます）' : net.status === 'full' ? 'その部屋には、もう2人います' : net.status === 'busy' ? '部屋を準備しています…' : '相手を待っています…'}</div>
       ${net.role === 'A' ? `<button class="btn main ${p ? 'guide' : ''}" data-l="go" ${p ? '' : 'disabled'}>出勤する</button>` : `<div class="note">相手が「出勤する」を押すと始まります</div>`}
       <button class="btn sm" data-l="back">やめる</button>`; }
 }
@@ -339,7 +339,7 @@ const BRIEF = {
   kousin: { goal: '使者の言葉を解読して、正しく返事をする',
     A: { k: 'ans', first: ['使者の言葉（あなたにだけ聞こえる）を見る', '相棒に、しぐさと返事の中身を聞く', '同じ言葉が出る文を照らし合わせ、「返事する」'] },
     B: { k: 'sup', first: ['使者のしぐさ（あなたにだけ見える）を見る', 'しぐさと、返事の中身を相棒に話す', '相棒が正しく返事できたら成功'] },
-    rules: ['言葉が聞こえるのは片方、しぐさが見えるのはもう片方', '同じ言葉は、同じしぐさと同じ意味', '返事を決めて押すのは回答役だけ'],
+    rules: ['言葉が聞こえるのは片方、しぐさが見えるのはもう片方', '同じ言葉は、同じしぐさと同じ意味', '返事は3語。使者の文と同じ並び順で組む（日本語の順とはちがう）', '返事を決めて押すのは回答役だけ'],
     prac: 'まず練習：2つの文を照らし合わせて、1語を選ぶ' },
   bunki: { goal: 'ふたりで同じ「安全な扉」を選んで、次の階へ',
     A: { k: 'both', first: ['案内人（ペロ・ミミ）に「安全な扉は？」と聞く', '答えを相棒に伝え、相棒の答えも聞く', 'ふたりで同じ扉を押す'] },
@@ -402,7 +402,7 @@ function kousinWork(s, me) {
   if (j.stage === 0) {      // practice: two sentences, one shared word. A has the words, B has the gestures -> match them up
     const fb = j.last === 'teach_miss' ? `<div class="msg bad">使者は首をかしげた。もう一度、照らし合わせよう</div>` : '';
     if (me === 'A') return { L: card('mine', MINE + '：使者の言葉', ro(T.lines, plain)),
-      R: fb + card('q', '<span class="pbadge">練習</span>問題：返事の言葉は？', `<div class="tiles">${T.tiles.map(k => `<button class="tile ${local.reply[0] === k ? 'on' : local.reply.length ? '' : 'guide'}" data-tile="${k}"><span class="alien">${w(k)}</span></button>`).join('')}</div>`) + `<button class="btn main ${local.reply.length === 1 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 1 ? '' : 'disabled'}>返事する</button>` };
+      R: fb + card('q', '<span class="pbadge">練習</span>問題：返事の言葉は？', `<div class="tiles">${T.tiles.map(k => `<button class="tile ${local.reply[0] === k ? 'on' : local.reply.length ? '' : 'guide'}" data-tile="${k}"><span class="alien ${w(k).length > 3 ? 'long' : ''}">${w(k)}</span></button>`).join('')}</div>`) + `<button class="btn main ${local.reply.length === 1 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 1 ? '' : 'disabled'}>返事する</button>` };
     return { L: card('mine', MINE + '：使者のしぐさ（順番はバラバラ）', ro(T.gestures, k => `<span style="margin-right:10px;display:inline-block">${G(k)}</span>`)),
       R: fb + card('sup', 'あなたはサポート役', `相棒が返事の言葉を選ぶ。返事は<b>「${JA(T.target)}」</b>の言葉。<br>「${G(T.target)}」が出る文はどっち？ 相棒に伝えて、言葉と照らし合わせよう`) };
   }
@@ -411,13 +411,13 @@ function kousinWork(s, me) {
   const gaveA = j.gave ? `<br>使者が言い直した：「${w(j.gave)}」＝「${JA(j.gave)}」` : '';
   const fb = j.last === 'teach_ok' ? `<div class="msg ok">通じた！ 次は3語で返事</div>`
     : !miss ? '' : me === 'A' ? `<div class="msg bad">通じなかった。相棒に結果を聞こう${gaveA}</div>`
-      : `<div class="msg bad">相棒の返事：言葉 ${j.hit.words}/3・場所 ${j.hit.pos}/3。相棒に伝えよう${j.gave ? '<br>使者が1語、言い直した（相棒の画面に出る）' : ''}${j.misses >= L.KOUSIN_LOCK_FROM ? '<br>次の返事まで少し待つ' : ''}</div>`;
+      : `<div class="msg bad">相棒の返事：合っている言葉 ${j.hit.words}/3・並び順も合っている ${j.hit.pos}/3。相棒に伝えよう${j.gave ? '<br>使者が1語、言い直した（相棒の画面に出る）' : ''}${j.misses >= L.KOUSIN_LOCK_FROM ? '<br>次の返事まで少し待つ' : ''}</div>`;
   if (me === 'A') {
     const uniq = [...new Set(p.lines.flat().concat(p.question).map(w))].filter(x => !known[x]), memoOn = local.tab === 'memo';
     const lhead = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><small style="flex:1;margin:0;font-size:13px;font-weight:800;color:var(--mine)">${MINE}：使者の言葉</small><button class="btn sm" data-tab="${memoOn ? 'reply' : 'memo'}">${memoOn ? '返事にもどる' : '意味メモ'}</button></div>`;
     const body = memoOn
-      ? card('q', '意味のメモ（自分用）', `<div class="dictrow">${uniq.map(x => `<span class="alien">${x}</span><select data-dict="${x}"><option value="">？</option>${Object.values(L.CONCEPTS).map(c => `<option ${local.dict[x] === c.ja ? 'selected' : ''}>${c.ja}</option>`).join('')}</select>`).join('')}</div>`)
-      : card('q', '', `<div class="tiles">${p.tiles.map(k => `<button class="tile ${local.reply.includes(k) ? 'on' : ''}" data-tile="${k}"><span class="alien">${w(k)}<small>${esc(memo(w(k))) || '　'}</small></span>${local.reply.includes(k) ? `<i class="ord">${local.reply.indexOf(k) + 1}</i>` : ''}</button>`).join('')}</div>
+      ? card('q', '意味のメモ（自分用）', `<div class="dictrow">${uniq.map(x => `<label><span class="alien ${x.length > 3 ? 'long' : ''}">${x}</span><select data-dict="${x}"><option value="">？</option>${Object.values(L.CONCEPTS).map(c => `<option ${local.dict[x] === c.ja ? 'selected' : ''}>${c.ja}</option>`).join('')}</select></label>`).join('')}</div>`)
+      : card('q', '', `<div class="tiles">${p.tiles.map(k => `<button class="tile ${local.reply.includes(k) ? 'on' : ''}" data-tile="${k}"><span class="alien ${w(k).length > 3 ? 'long' : ''}">${w(k)}<small>${esc(memo(w(k))) || '　'}</small></span>${local.reply.includes(k) ? `<i class="ord">${local.reply.indexOf(k) + 1}</i>` : ''}</button>`).join('')}</div>
           <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm" data-a="kclear" style="flex:1">消す</button><button class="btn main sm ${local.reply.length === 3 && !lock ? 'guide' : ''}" style="flex:2" data-a="ksend" ${local.reply.length === 3 && !lock ? '' : 'disabled'}>${lock ? `あと<span class="lockn">${lock}</span>秒` : '伝える'}</button></div>`);
     return { L: `<div class="card mine">${lhead}<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.question.map(al).join('')}</span></div>` + p.lines.map((l, i) => `<div class="rowline"><b>${i + 1}</b><span>${l.map(al).join('')}</span></div>`).join('') + '</div>', R: fb + body };
   }
@@ -518,13 +518,12 @@ function renderEnd() {
   const Q = [['again', 'またこのふたりで遊びたい？'], ['talk', '伝え合うのは楽しかった？'], ['tired', '途中で疲れた・つまらなくなった？']];
   const mine = s.survey[me] || local.survey;
   let h = `<div class="grid2" style="align-items:start"><div><h2>本日の業務、おつかれさまでした</h2>
-    <div style="color:var(--mut);margin-bottom:4px">${esc(s.names.A)} と ${esc(s.names.B)}　・　${mmss(s.finishedAt - s.startedAt)}</div>
+    <div style="color:var(--mut);margin-bottom:4px">${esc(s.names.A)} と ${esc(s.names.B)}　・　${mmss(s.finishedAt - s.startedAt)}${s.survey.A && s.survey.B ? '　<b style="color:var(--green)">回答がそろいました。スクショしてね</b>' : ''}</div>
     ${card('', '', `交信室：${res('kousin')}（失敗 ${J.kousin.misses}回）<br>分岐路：${res('bunki')}（失敗 ${J.bunki.misses}回）<br>和平会議：${res('kaigi')}（言い直し ${J.kaigi.fails}回）`)}
     <div style="height:4px"></div>${card('', 'かかった時間', s.log.map(x => `${LOGN[x.k] || x.k} ${mmss(x.t)}`).join(' → '))}
     ${me === 'A' || net.solo ? '<button class="btn" style="margin-top:6px" data-q="again-run">新しい業務で、もう一度</button>' : ''}</div><div>
     ${card('', 'ひとことアンケート', Q.map(([k, q]) => `<div class="srow"><span>${q}</span><span class="ans">${['はい', 'いいえ'].map(a => `<button class="btn sm ${mine[k] === a ? 'on' : ''}" data-q="${k}|${a}">${a}</button>`).join('')}</span></div>`).join('')
       + `<div style="font-size:14px;margin-top:4px">いちばん面白かった仕事は？</div><div class="grid3" style="margin-top:3px">${L.JOBS.map(k => `<button class="btn sm ${mine.best === k ? 'on' : ''}" data-q="best|${k}">${NAMES[k]}</button>`).join('')}</div>`)}`;
-  if (s.survey.A && s.survey.B) h += `<div class="msg ok" style="margin-top:6px">回答がそろいました。スクショしてね。</div>`;
   $('endbody').innerHTML = `<div class="fit">${h}</div></div></div>`;
 }
 $('endbody').addEventListener('click', e => {

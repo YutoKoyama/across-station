@@ -112,12 +112,13 @@ export function tagger(frame, cam, items) { // items: [{pos:Vector3, html, col}]
   for (const it of items) { it.el = document.createElement('div'); it.el.className = 'tag'; it.el.style.setProperty('--c', it.col); it.el.innerHTML = it.html; box.appendChild(it.el); }
   const fr = r0 => r0, hit = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
   return () => { const w = frame.clientWidth, h = frame.clientHeight;
-    const plates = [...frame.querySelectorAll('#topbar > *, #stick, .act, #lobby, #logo, #coach')].filter(e => e.offsetParent).map(e => ({ l: e.offsetLeft, t: e.offsetTop, r: e.offsetLeft + e.offsetWidth, b: e.offsetTop + e.offsetHeight }));
+    const plates = [...frame.querySelectorAll('#topbar > *, #stick, .act, #lobby, #logo, #coach, #bub')].filter(e => e.offsetParent).map(e => ({ l: e.offsetLeft, t: e.offsetTop, r: e.offsetLeft + e.offsetWidth, b: e.offsetTop + e.offsetHeight }));
     const shown = [];
     for (const it of items) { const v = it.pos.clone().project(cam); let px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h;
       if (it.el.offsetWidth) { it.w = it.el.offsetWidth; it.h = it.el.offsetHeight; } const tw = it.w || 110, th = it.h || 38;
       let rc = { l: px - tw / 2, r: px + tw / 2, t: py - th, b: py };
-      for (const o of shown) if (hit(rc, o)) { const dy = rc.b - o.t + 4; py -= dy; rc = { l: rc.l, r: rc.r, t: rc.t - dy, b: rc.b - dy }; }
+      for (let k = 0, moved = true; moved && k < 8; k++) { moved = false;     // repeat: a nudge can land it on a tag it was already checked against
+        for (const o of shown) if (hit(rc, o)) { const dy = rc.b - o.t + 4; py -= dy; rc = { l: rc.l, r: rc.r, t: rc.t - dy, b: rc.b - dy }; moved = true; } }
       const ok = v.z < 1 && rc.l > 4 && rc.r < w - 4 && rc.t > 4 && rc.b < h - 4 && !plates.some(p => hit(rc, p));
       it.el.style.display = ok ? 'block' : 'none'; if (ok) shown.push(rc);
       it.el.style.left = px + 'px'; it.el.style.top = py + 'px'; } };
