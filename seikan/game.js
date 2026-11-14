@@ -33,7 +33,7 @@ function fitAll() {
   const lb = $('lobby'); if (lb.offsetParent) { lb.style.zoom = 1; const z = Math.min(1, (H - 16) / lb.offsetHeight, (W * 0.52) / lb.offsetWidth); lb.style.zoom = z < 0.995 ? Math.max(0.6, z).toFixed(3) : 1; }
   const lg = $('logo'); if (lg.offsetParent) { lg.style.zoom = 1; const lbr = lb.getBoundingClientRect(), lgr = lg.getBoundingClientRect(), room = (window.__rotated ? lbr.top - lgr.top : lbr.left - lgr.left) - 14; const z = Math.min(1, room / lg.scrollWidth); lg.style.zoom = z < 0.995 ? z.toFixed(3) : 1; }
   const bx = $('brief').querySelector('.box'); if (bx && $('brief').classList.contains('on')) shrink(bx, W * 0.92, H - 16, 0.6);
-  const st = $('intro').querySelector('.stage'); if ($('intro').classList.contains('on')) { $('intro').style.zoom = 1; const z = Math.min(1, (H - 8) / 330, (W - 16) / 470); $('intro').style.zoom = z < 0.995 ? z.toFixed(3) : 1; }
+  const st = $('intro').querySelector('.stage'); if ($('intro').classList.contains('on')) { $('intro').style.zoom = 1; const z = Math.min(1, (H - 8) / 380, (W - 16) / 520); $('intro').style.zoom = z < 0.995 ? z.toFixed(3) : 1; }
 }
 function layout() {
   const vw = innerWidth, vh = innerHeight, up = vh > vw; window.__rotated = up;
@@ -105,11 +105,14 @@ function webSpeech() {
     dictApi.onState(({ state }) => { local.listening = state === 'listening'; render(true); }); } render(true); })();
 
 // ---------------------------------------------------------------- intro: three rules as a 7-second animation, then the mini game
-const INTRO = ['見えるものが、ふたりで違う', '声で伝える', '押せるのは、片方だけ'];
+const INTRO = [['ふたりの画面は、ちがう', '同じ部屋にいても、見えているものが違います'],
+  ['サポート役には、ヒントが見える', '答えの手がかりは、サポート役の画面だけに出ます'],
+  ['声で、相棒に伝える', '通話で話そう。画面を見せ合うのはナシ'],
+  ['回答役は、聞いて答えを押す', '問題が出ている人が回答役。役は交代していきます']];
 let introT = 0;
 function playIntro() { const el = $('intro'); let i = 0; el.classList.add('on');
-  const show = () => { el.classList.remove('s1', 's2', 's3'); el.classList.add('s' + (i + 1)); $('introCap').textContent = INTRO[i]; el.querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k === i)); $('introGo').classList.toggle('guide', i === 2); };
-  show(); fitAll(); clearInterval(introT); introT = setInterval(() => { i = (i + 1) % 3; show(); }, 2300); }
+  const show = () => { el.classList.remove('s1', 's2', 's3', 's4'); el.classList.add('s' + (i + 1)); $('introCap').textContent = INTRO[i][0]; $('introSub').textContent = INTRO[i][1]; el.querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k === i)); $('introGo').classList.toggle('guide', i === INTRO.length - 1); };
+  show(); fitAll(); clearInterval(introT); introT = setInterval(() => { i = (i + 1) % INTRO.length; show(); }, 3200); }
 $('introGo').addEventListener('click', () => { clearInterval(introT); $('intro').classList.remove('on'); local.introSeen = true; });
 
 // ---------------------------------------------------------------- what to do now (one line, always in the same place)
