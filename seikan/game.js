@@ -26,7 +26,7 @@ function shrink(el, availW, availH, min = 0.9) {
   el.style.zoom = z < 0.995 ? z.toFixed(3) : 1; if (z >= 0.995) el.style.setProperty('--bz', 1); return z;
 }
 function fitAll() {
-  if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && frame.classList.contains('working')) return;   // the keyboard is up: keep the layout, let it scroll
+  if (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && frame.classList.contains('working') && !$('brief').classList.contains('on')) return;   // the keyboard is up: keep the layout, let it scroll
   const W = frame.clientWidth, H = frame.clientHeight, tb = $('topbar');
   if (tb.offsetParent) { tb.style.zoom = 1; const avail = tb.clientWidth; const need = [...tb.children].reduce((a, c) => a + (c.id === 'goal' ? 210 : c.scrollWidth) + 8, 0);
     const tz = need > avail ? Math.max(0.9, avail / need) : 1; tb.style.zoom = tz < 0.995 ? tz.toFixed(3) : 1; tb.style.setProperty('--bz', (1 / tz).toFixed(3)); }
@@ -489,7 +489,7 @@ async function onAct(e) {
   if (d.a === 'plaza') { local.help = false; window.__goScene('plaza'); return; }
   if (d.a === 'swap') { net.role = me === 'A' ? 'B' : 'A'; local.reply = []; render(true); return; }
   if (d.a === 'warp') { const n = nextJob(s); if (n) window.__goScene(n); return; }
-  if (d.a === 'help') { local.help = true; render(true); return; }
+  if (d.a === 'help') { local.help = true; try { document.activeElement && document.activeElement.blur(); } catch (err) {} render(true); fitAll(); return; }   // close the keyboard first, or the card is laid out for half a screen and its buttons fall off
   if (d.a === 'brief') { local.briefSeen[sceneName] = true; local.help = false; render(true); return; }
   if (d.tut) { net.act({ t: 'tut_pick', color: d.tut, role: me }); return; }
   if (d.tab) { local.tab = d.tab; local.memoPick = ''; render(true); return; }

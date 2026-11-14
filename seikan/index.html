@@ -209,7 +209,7 @@
   #talk .skip{position:absolute;right:calc(10px + var(--sr));bottom:calc(10px + var(--sb));min-height:44px;font-size:13px}
   @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
   /* briefing card shown once per job */
-  #brief{inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,6,18,.82);z-index:7}
+  #brief{inset:0;display:none;align-items:safe center;justify-content:center;background:rgba(4,6,18,.82);z-index:7;overflow-y:auto;overscroll-behavior:contain}
   #brief.on{display:flex}
   #brief .box{transform-origin:50% 50%;width:min(560px,86%);padding:16px 18px;background:var(--solid);border-radius:16px}
   #brief h2{margin:0 0 4px;font-size:22px}
