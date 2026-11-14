@@ -100,16 +100,28 @@ function webSpeech() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return null;
   let rec = null, fin = () => {}, part = () => {}, st = () => {};
   return { onFinal(f) { fin = f; }, onPartial(f) { part = f; }, onState(f) { st = f; },
-    start() { rec = new SR(); rec.lang = 'ja-JP'; rec.interimResults = true; rec.continuous = false;
-      rec.onresult = e => { const r = e.results[e.results.length - 1]; if (r.isFinal) fin({ text: r[0].transcript }); else part({ text: r[0].transcript }); };
-      rec.onend = () => st({ state: 'idle' }); rec.onerror = ev => st({ state: 'idle', reason: ev.error });
-      rec.start(); st({ state: 'listening' }); return Promise.resolve(); },
+    start() { let got = false, err = '';
+      try { rec = new SR(); rec.lang = 'ja-JP'; rec.interimResults = true; rec.continuous = false;
+        rec.onresult = e => { got = true; const r = e.results[e.results.length - 1]; if (r.isFinal) fin({ text: r[0].transcript }); else part({ text: r[0].transcript }); };
+        rec.onerror = ev => { err = ev.error || 'error'; };
+        rec.onend = () => st({ state: 'idle', reason: err || (got ? '' : 'no-speech') });
+        rec.start(); } catch (e) { return Promise.reject({ code: 'start', message: String(e) }); }
+      st({ state: 'listening' }); return Promise.resolve(); },
     stop() { try { rec && rec.stop(); } catch (e) {} return Promise.resolve(); } };
 }
 (async () => { try { dictApi = (window.claude ? await window.claude.use('dictation') : null) || webSpeech(); } catch (e) { dictApi = webSpeech(); }
   if (dictApi) { dictApi.onPartial(({ text }) => { const t = $('kt'); if (t) t.value = (local.kaigiText + ' ' + text).trim(); });
     dictApi.onFinal(({ text }) => { local.kaigiText = (local.kaigiText + ' ' + text).trim().slice(0, 80); const t = $('kt'); if (t) t.value = local.kaigiText; });
-    dictApi.onState(({ state }) => { local.listening = state === 'listening'; render(true); }); } render(true); })();
+    dictApi.onState(({ state, reason }) => { local.listening = state === 'listening';
+      if (state !== 'listening' && reason && reason !== 'aborted') micFail(reason); render(true); }); } render(true); })();
+// say why the voice input did nothing (it used to fail silently: during a call the phone often keeps the microphone for the call app)
+function micFail(reason) {
+  if (reason === 'no-speech') { toast('声が聞き取れませんでした。「声で入力」を押してから話してください', 3200); return; }
+  if (reason === 'not-allowed' || reason === 'service-not-allowed' || reason === 'not_granted') local.noMic = true;
+  toast(reason === 'audio-capture' ? 'マイクが使えません（通話中だと使えないことがあります）。キーボードのマイクか文字で入力してください'
+    : reason === 'network' ? '声の入力には通信が必要です。文字で入力してください'
+    : '声の入力が使えません。キーボードのマイクか文字で入力してください', 4200);
+}
 
 // ---------------------------------------------------------------- intro: three rules as a 7-second animation, then the mini game
 const INTRO = [['ふたりの画面は、ちがう', '同じ部屋にいても、見えているものが違います'],
@@ -495,7 +507,8 @@ async function onAct(e) {
     net.act({ t: 'bunki_ask', guide: g, q: 'door', role: me, say }); return; }
   if (d.door) { net.act({ t: 'bunki_vote', door: Number(d.door), role: me, attempt: s.jobs.bunki.attempt, stage: s.jobs.bunki.stage }); return; }
   if (d.a === 'mic') { if (local.listening) { try { await dictApi.stop(); } catch (err) {} return; }
-    dictApi.start().catch(err => { if (err && err.code === 'not_granted') local.noMic = true; toast('声の入力が使えません。キーボードのマイクか文字で入力してください'); render(true); }); return; }
+    let p; try { p = dictApi.start(); } catch (err) { p = Promise.reject(err); }
+    Promise.resolve(p).catch(err => { local.listening = false; micFail(err && err.code === 'not_granted' ? 'not_granted' : 'start'); render(true); }); return; }
   if (d.a === 'kverdict') { net.act({ t: 'kaigi_verdict', step: s.jobs.kaigi.step, ok: d.ok === '1', role: me, pid: s.jobs.kaigi.pending?.id }); return; }
   if (d.a === 'ksubmit') { if (local.listening) { try { await dictApi.stop(); } catch (err) {} }
     const text = (local.kaigiText || '').trim().slice(0, 80); if (text.length < 2) { toast('訳を書いてください'); return; }
