@@ -63,7 +63,7 @@ export function kousin(S) {
     player: me, other: aya, lookAhead: 4, lookUp: 0.9, actLabel: null,
     walk: { ground: (x, z) => inRoom(x, z) && !inBox(x, z, 0, -2.6, 2.7, 0.7) && !inCircle(x, z, 0, -6.5, 1.9) ? 0 : null,
       interact: (x, z) => Math.hypot(x, z - 12) < 3 ? { label: '広場へ', go: () => { window.__goScene('plaza'); } } : null },
-    tags: [{ pos: new THREE.Vector3(0, 5.4, -6.5), html: '<small>使者</small>ヴェル＝ナ', col: C.teal, obj: env, foot: 0.1 }], aliens: [env, tiles],
+    tags: [{ pos: new THREE.Vector3(0, 5.4, -6.5), html: '<small>使者</small>ヴェル＝ナ', col: C.teal, obj: env, foot: 0.1 }], aliens: [env, tiles], props: [desk],
     update(t) { env.position.y = 3.3 + Math.sin(t * 1.1) * 0.18; bell.scale.y = 1.05 + Math.sin(t * 2.2) * 0.04;
       ribbons.forEach((r, i) => { r.rotation.y = Math.sin(t * 0.9 + i) * 0.08; r.rotation.z = Math.sin(t * 1.3 + i * 2) * 0.05; });
       tiles.rotation.y = t * 0.2; },
@@ -138,9 +138,9 @@ function gura() { // moss people: tall soft bean with leaf crown
 export function kaigi(S) {
   roomShell(S, { trim: C.amber, wall: '#33305c', floor: '#403a66', window: { gap: 1.1, rot: 0 } });
   spaceWindow(S, { w: 10, h: 4.6, y: 3.6 });
-  put(S, new THREE.CylinderGeometry(3.6, 3.6, 0.3, 96), mat('#d9b98a', { roughness: 0.45 }), 0, 1.15, -4);
-  put(S, new THREE.CylinderGeometry(3.0, 3.2, 1.0, 96), mat('#7a5a44'), 0, 0.5, -4);
-  put(S, new THREE.TorusGeometry(3.6, 0.06, 8, 128), glow(C.amber, 0.9), 0, 1.31, -4, false).rotation.x = Math.PI / 2;
+  const table = [put(S, new THREE.CylinderGeometry(3.6, 3.6, 0.3, 96), mat('#d9b98a', { roughness: 0.45 }), 0, 1.15, -4),
+    put(S, new THREE.CylinderGeometry(3.0, 3.2, 1.0, 96), mat('#7a5a44'), 0, 0.5, -4),
+    put(S, new THREE.TorusGeometry(3.6, 0.06, 8, 128), glow(C.amber, 0.9), 0, 1.31, -4, false)]; table[2].rotation.x = Math.PI / 2;
   // flags of both peoples
   for (const [x, c] of [[-6.5, '#f08a6a'], [6.5, '#8cc48a']]) { put(S, new THREE.CylinderGeometry(0.06, 0.06, 4, 12), mat('#cfc6b3'), x, 2, -7.5);
     const f = put(S, rbox(1.4, 2.0, 0.05, 0.1), mat(c, { roughness: 0.8 }), x + 0.75, 3, -7.5); }
@@ -157,7 +157,7 @@ export function kaigi(S) {
     player: me, other: aya, lookAhead: 4.5, lookUp: 0.2, actLabel: null,
     walk: { ground: (x, z) => inRoom(x, z) && !inCircle(x, z, 0, -4, 4.1) && ![...left, ...right].some(o => inCircle(x, z, o.position.x, o.position.z, 1.2)) && !inBox(x, z, -6.5, -7.5, 0.3, 0.3) && !inBox(x, z, 6.5, -7.5, 0.3, 0.3) ? 0 : null,
       interact: (x, z) => Math.hypot(x, z - 12) < 3 ? { label: '広場へ', go: () => { window.__goScene('plaza'); } } : null },
-    tags: [{ pos: new THREE.Vector3(-4.9, 3.0, -4.0), html: '<small>クリル族の代表</small>ハサ長老', col: '#f08a6a', group: [[-4.4, -6.4], [-2.6, -8.3]] }, { pos: new THREE.Vector3(4.9, 3.4, -4.0), html: '<small>グラ族の代表</small>モス議長', col: '#8cc48a', group: [[4.4, -6.4], [2.6, -8.3]] }].map((t, i) => ({ ...t, obj: [left, right][i][0], camUp: 1.4 })), aliens: [...left, ...right],
+    tags: [{ pos: new THREE.Vector3(-4.9, 3.0, -4.0), html: '<small>クリル族の代表</small>ハサ長老', col: '#f08a6a', group: [[-4.4, -6.4], [-2.6, -8.3]] }, { pos: new THREE.Vector3(4.9, 3.4, -4.0), html: '<small>グラ族の代表</small>モス議長', col: '#8cc48a', group: [[4.4, -6.4], [2.6, -8.3]] }].map((t, i) => ({ ...t, obj: [left, right][i][0], camUp: 1.4 })), aliens: [...left, ...right], props: table,
     update(t) { orb.scale.setScalar(1 + Math.sin(t * 2.4) * 0.06); left.forEach((k, i) => k.position.y = Math.abs(Math.sin(t * 1.8 + i)) * 0.04); right.forEach((g, i) => g.rotation.z = Math.sin(t * 0.9 + i) * 0.03); },
   };
 }

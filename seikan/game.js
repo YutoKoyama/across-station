@@ -92,7 +92,7 @@ const lastRoom = () => { try { const r = JSON.parse(localStorage.getItem(KEY + '
 const saveRoom = (code, role) => { try { localStorage.setItem(KEY + 'last', JSON.stringify({ code, role, t: Date.now() })); } catch (e) {} };
 let myName = (() => { try { return localStorage.getItem(KEY + 'name') || ''; } catch (e) { return ''; } })();
 let lobby = { step: 'start', err: '' };
-export const VER = '11/15-5';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
+export const VER = '11/15-6';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
 $('logo').insertAdjacentHTML('beforeend', `<p class="ver">版 ${VER}</p>`);
 const local = { dict: {}, reply: [], kaigiText: '', busy: false, survey: {}, other: {}, asking: '', listening: false, noMic: false, tab: 'reply', briefSeen: {}, help: false,
   walked: false, walk0: null, sceneAt: 0, lastSig: '', lastChange: 0, seedSeen: undefined, khLen: 0 };
@@ -398,7 +398,18 @@ function closeUp(dt) {
   _o.copy(cam.position); _l.copy(view.target).add(view.look);
   cam.position.lerpVectors(_o, shot.cp, e); cam.lookAt(_l.lerp(shot.cl, e));
 }
+// desks and tables fade out while the camera is close, so they never stand between you and the alien
+let propsFaded = false;
+function fadeProps() {
+  const e = shot.k * shot.k * (3 - 2 * shot.k), op = 1 - Math.min(1, e * 1.4), on = op < 0.999;
+  if (!on && !propsFaded) return; propsFaded = on;
+  for (const p of (sc && sc.props) || []) { p.visible = op > 0.02; p.traverse(o => { const m = o.material; if (!m) return;
+    if (m.userData.op0 === undefined) m.userData.op0 = m.opacity;
+    const tr = on || m.userData.op0 < 1; if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; }
+    m.opacity = m.userData.op0 * op; m.depthWrite = !on; }); }
+}
 function renderShot() {
+  fadeProps();
   if (!shot.hide) { R.render(S, cam); return; }
   const sp = sc.tags[shot.who].obj, off = (sc.aliens || []).filter(o => o !== sp && o.visible).concat([sc.player, sc.other].filter(o => o && o.visible));
   off.forEach(o => { o.visible = false; }); R.render(S, cam); off.forEach(o => { o.visible = true; });
