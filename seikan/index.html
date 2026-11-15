@@ -213,6 +213,9 @@
   /* briefing card shown once per job */
   #brief{inset:0;display:none;align-items:safe center;justify-content:center;background:rgba(4,6,18,.82);z-index:7;overflow-y:auto;overscroll-behavior:contain}
   #brief.on{display:flex}
+  #brief .ex{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(255,190,80,.1);font-size:15px;font-weight:800}
+  #brief .ex>b{color:var(--amber);font-size:13px} #brief .ex span{display:flex;flex-direction:column} #brief .ex i{font-style:normal;font-size:13px;color:var(--mut)} #brief .ex em{font-style:normal;color:var(--amber)}
+  #brief .ex small{flex-basis:100%;font-size:13px;color:var(--mut)}
   #brief .box{transform-origin:50% 50%;width:min(560px,86%);padding:16px 18px;background:var(--solid);border-radius:16px}
   #brief h2{margin:0 0 4px;font-size:22px}
   #brief p{margin:4px 0 10px;font-size:17px;font-weight:800;color:var(--amber)}
@@ -309,6 +312,6 @@
     <button class="btn main" id="introGo">やってみる</button></div>
   <div class="hud ui" id="end"><div id="endbody"></div></div>
 </div>
-<script type="module" src="./game.js?v=11157"></script>
+<script type="module" src="./game.js?v=11158"></script>
 </body>
 </html>

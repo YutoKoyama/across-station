@@ -9,7 +9,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const frame = $('frame');
 const NAMES = { title: '星間通訳局', office: '執務室', plaza: '中央広場', kousin: '交信室', bunki: '分岐路', kaigi0: '和平会議の練習', kaigi: '和平会議' };
-const JOBSUB = { kousin: '言葉を訳す', bunki: 'うそを見抜く', kaigi: '怒らせずに訳す' };
+const JOBSUB = { kousin: '言葉を訳す', bunki: 'うそを見抜く', kaigi: '言い換えて伝える' };
 const ROLE = { A: { col: C.amber, css: 'var(--amber)' }, B: { col: C.teal, css: 'var(--teal)' } };
 const MINE = 'あなただけに見える', TELL = '声で伝える';
 const card = (kind, label, body) => `<div class="card ${kind}">${label ? `<small>${label}</small>` : ''}${body}</div>`;
@@ -92,7 +92,7 @@ const lastRoom = () => { try { const r = JSON.parse(localStorage.getItem(KEY + '
 const saveRoom = (code, role) => { try { localStorage.setItem(KEY + 'last', JSON.stringify({ code, role, t: Date.now() })); } catch (e) {} };
 let myName = (() => { try { return localStorage.getItem(KEY + 'name') || ''; } catch (e) { return ''; } })();
 let lobby = { step: 'start', err: '' };
-export const VER = '11/15-7';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
+export const VER = '11/15-8';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
 $('logo').insertAdjacentHTML('beforeend', `<p class="ver">版 ${VER}</p>`);
 const local = { dict: {}, reply: [], kaigiText: '', busy: false, survey: {}, other: {}, asking: '', listening: false, noMic: false, tab: 'reply', briefSeen: {}, help: false,
   walked: false, walk0: null, sceneAt: 0, lastSig: '', lastChange: 0, seedSeen: undefined, khLen: 0 };
@@ -167,7 +167,7 @@ function roleOf(s, me) {
   if (sceneName === 'bunki') return { k: 'both', t: '問題：安全な扉は1〜3番のどれ？ 案内人に聞いて、同じ扉を選ぼう' };
   if (sceneName === 'kaigi') { const st = L.KAIGI[j.step], wr = me === L.writerOf(st);
     if (j.pending) return wr ? { k: 'ans', t: '相棒が、訳が伝わったか判定している' } : { k: 'sup', t: '相棒の訳が届いた。伝わったか判定しよう' };
-    return wr ? { k: 'ans', t: `問題：${L.CULTURE[st.from].boss}の発言を、${L.CULTURE[st.to].name}を怒らせずに訳そう` } : { k: 'sup', t: `相棒が訳を書く。${L.CULTURE[st.from].boss}の発言の意味を教えよう` }; }
+    return wr ? { k: 'ans', t: `問題：${L.CULTURE[st.from].boss}の発言の意味を、${L.CULTURE[st.to].name}へ言い換えよう` } : { k: 'sup', t: `相棒が訳を書く。${L.CULTURE[st.from].boss}の発言の意味を教えよう` }; }
   return null;
 }
 const HINT = {
@@ -310,6 +310,7 @@ const TALK = {
     SAY(0, `クリルの言い回しは${kr}、グラの言い回しは${gr}が知っておる。`),
     SAY(1, sampleApi ? '発言した族の側が<b>意味を説明</b>し、もう片方が<b>相手の族向けに訳</b>を書くのだ。' : '発言した族の側が<b>意味を説明</b>し、もう片方が訳を書く。伝わったかは<b>説明した側</b>が見届ける。'),
     SAY(0, 'そして互いに、口にされると怒る<b>禁句</b>がある。議題によっては、<b>使えない言葉</b>もあるぞ。'),
+    SAY(1, '通訳官は<b>返事をするのではない</b>。発言の意味を、禁句を避けて<b>言い換えて</b>相手に届けるのだ。'),
     SAY(1, '場の緊張が<b>100%</b>になれば、会談は決裂だ。……まずは、軽い一言から訳してもらおう。')] }; },
 };
 const talk = { key: '', i: 0, n: 0, typed: 0, timer: 0, data: null };
@@ -430,10 +431,11 @@ const BRIEF = {
     B: { k: 'both', first: ['案内人（ゴウ・ナナ）に「安全な扉は？」と聞く', '答えを相棒に伝え、相棒の答えも聞く', 'ふたりで同じ扉を押す'] },
     rules: ['案内人は4人。半分ずつ、別々の人に質問できる', '本番の階には、うそつきがいる', 'うその見分け方は、ゴウ・ナナ側の画面にだけ出る'],
     prac: 'まず練習：うそつきのいない階で、扉を選ぶ' },
-  kaigi: { goal: '両族の発言を訳して、会談をまとめる',
-    A: { k: 'swap', first: ['発言の主と同じ族の人が、意味を説明する（サポート役）', 'もう片方が、相手の族向けに訳を書く（回答役）{J}', '議題ごとに役が交代する'] },
-    B: { k: 'swap', first: ['発言の主と同じ族の人が、意味を説明する（サポート役）', 'もう片方が、相手の族向けに訳を書く（回答役）{J}', '議題ごとに役が交代する'] },
-    rules: ['言い回しの意味を知っているのはサポート役だけ', '禁句と、使えない言葉を知っているのは回答役だけ', '伝わらないと緊張度が上がり、100%でその議題をやり直し'],
+  kaigi: { goal: '片方の族の発言を、もう片方の族へ「言い換えて伝える」（返事や言い返しはしない）',
+    A: { k: 'swap', first: ['サポート役：遠回しな発言を、メモで本当の意味に直して声で伝える', '回答役：聞いた意味を、禁句を使わない言葉で書く{J}', '議題ごとに役が交代する'] },
+    B: { k: 'swap', first: ['サポート役：遠回しな発言を、メモで本当の意味に直して声で伝える', '回答役：聞いた意味を、禁句を使わない言葉で書く{J}', '議題ごとに役が交代する'] },
+    rules: ['書くのは返事ではなく、発言の意味の言い換え', '赤い禁句・使えない言葉が1つでも入ると失敗', '失敗で緊張度が上がる。100%でその議題をやり直し'],
+    ex: ['「腹の虫が鳴く」', '「おなかがすいた、って意味」', '「何か食べたい」', '「おなか」「すいた」が使えない言葉なら、別の言い方に変える'],
     prac: 'まず練習：短い発言を1つ訳す（緊張度は上がらない）' },
 };
 const RB = { ans: ['ans', 'あなたは回答役'], sup: ['sup', 'あなたはサポート役'], both: ['both', 'ふたりとも答える'], swap: ['sup', '役は交代しながら進む'] };
@@ -455,6 +457,7 @@ function renderWork(s, me, stuck) {
     const html = `<div class="box plate"><h2>${NAMES[sceneName]}　${JOBSUB[sceneName]}</h2><p>目標：${B.goal}</p>
       <div class="cols"><div><span class="rb ${rb[0]}">${rb[1]}</span><h3>まずやること</h3><ol>${M.first.map(x => `<li>${x.replace('{J}', sampleApi ? '' : '。伝わったかはサポート役が判定')}</li>`).join('')}</ol></div>
       <div><h3 style="margin-top:4px">ルール</h3><ul>${B.rules.map(x => `<li>${x}</li>`).join('')}</ul></div></div>
+      ${B.ex ? `<div class="ex"><b>例</b><span><i>発言</i>${B.ex[0]}</span><em>→</em><span><i>サポート役が話す</i>${B.ex[1]}</span><em>→</em><span><i>回答役が書く訳</i>${B.ex[2]}</span><small>${B.ex[3]}</small></div>` : ''}
       <div class="prac">${B.prac}</div>
       <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><span style="flex:1;font-size:13px;color:var(--mut)">画面は見せ合わず、声で伝え合う</span>${local.help ? '<button class="btn sm" data-a="skip">この仕事をスキップ</button>' : ''}<button class="btn main guide" data-a="brief">${local.help ? 'もどる' : 'はじめる'}</button></div></div>`;
     if (br.dataset.html !== html) { br.innerHTML = html; br.dataset.html = html; } }   // rebuild only when it changed: a rebuild between finger-down and finger-up loses the tap
@@ -605,7 +608,7 @@ function kaigiWork(s, me) {
       : res + step + card('sup', 'あなたはサポート役', `相棒が${to.name}向けに訳を書く。<br>左のメモで読み解いて、発言の<b>本当の意味</b>をふつうの言葉で教えよう`) };
   const ban = (st.ban || []).length ? `<br>この議題で言い換え禁止：<b style="color:var(--red);letter-spacing:.2em">${L.banShown(st).join(' ')}</b>（ひらがなでもダメ）` : '';
   return {
-    L: card('q', '問題', `${from.boss}の発言を、${to.name}を怒らせない言葉に訳そう。<br><span style="font-size:14px;color:var(--mut)">発言の意味は相棒が知っている。聞いてみよう</span>`) + card('warn', `${MINE}：使えない言葉`, `${cult.name}の禁句：<span style="font-size:24px;font-weight:800;color:var(--red);letter-spacing:.3em">${cult.taboo.join(' ')}</span>${ban}<br><span style="font-size:13px;color:var(--mut)">訳に入れると失敗</span>`),
+    L: card('q', '問題', `${from.boss}の発言の<b>意味</b>を、${to.name}へ言い換えて伝えよう（返事ではない）。<br><span style="font-size:14px;color:var(--mut)">意味は相棒が知っている。聞いて、下の禁句を使わずに書こう</span>`) + card('warn', `${MINE}：使えない言葉`, `${cult.name}の禁句：<span style="font-size:24px;font-weight:800;color:var(--red);letter-spacing:.3em">${cult.taboo.join(' ')}</span>${ban}<br><span style="font-size:13px;color:var(--mut)">訳に入れると失敗</span>`),
     R: pd ? step + card('wait', '', `あなたの訳：「${esc(pd.text)}」<br><b>相棒が判定中…</b>`)
       : res + step + `<div style="font-size:13px;font-weight:800;color:var(--amber)">あなたの答え（訳）</div><div style="display:flex;gap:8px;align-items:stretch">${dictApi && !local.noMic ? `<button class="btn ${local.listening ? 'teal' : ''}" data-a="mic" style="flex:none">${local.listening ? '話し終えた' : '声で入力'}</button>` : ''}<textarea id="kt" class="${local.kaigiText ? '' : 'guide'}" rows="2" maxlength="80" placeholder="${cult.name}への訳" style="flex:1"></textarea></div>
       <button class="btn main" data-a="ksubmit" ${local.busy ? 'disabled' : ''}>${local.busy ? to.name + 'が協議中…' : 'この訳を伝える'}</button>` };
