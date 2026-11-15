@@ -92,7 +92,7 @@ const lastRoom = () => { try { const r = JSON.parse(localStorage.getItem(KEY + '
 const saveRoom = (code, role) => { try { localStorage.setItem(KEY + 'last', JSON.stringify({ code, role, t: Date.now() })); } catch (e) {} };
 let myName = (() => { try { return localStorage.getItem(KEY + 'name') || ''; } catch (e) { return ''; } })();
 let lobby = { step: 'start', err: '' };
-export const VER = '11/15-4';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
+export const VER = '11/15-5';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
 $('logo').insertAdjacentHTML('beforeend', `<p class="ver">版 ${VER}</p>`);
 const local = { dict: {}, reply: [], kaigiText: '', busy: false, survey: {}, other: {}, asking: '', listening: false, noMic: false, tab: 'reply', briefSeen: {}, help: false,
   walked: false, walk0: null, sceneAt: 0, lastSig: '', lastChange: 0, seedSeen: undefined, khLen: 0 };
@@ -344,10 +344,11 @@ function screenBox(pts, W, H) { let l = 1e9, r = -1e9, t = 1e9, b = -1e9, any = 
   return any ? { l, r, t, b } : null; }
 function charBoxes(W, H) {
   const out = [];
-  for (const tg of (sc && sc.tags) || []) { const { x, y, z } = tg.pos, w = Math.max(1.1, 0.4 * y), h = y - 0.6, pts = [];   // the speaker and the rest of their party
+  (sc && sc.tags || []).forEach((tg, i) => { const { x, y, z } = tg.pos, w = Math.max(1.1, 0.4 * y), h = y - 0.6, pts = [];   // the speaker and the rest of their party
+    if (shot.hide) { out.push(i === shot.who ? screenBox([0, 1, 2, 3, 4, 5, 6, 7].map(j => new THREE.Vector3(x + (j & 1 ? w : -w), j & 2 ? y - 0.3 : tg.foot ?? 0, z + (j & 4 ? w : -w))), W, H) : null); return; }   // close-up: only the speaker is on screen
     for (const [px, pz] of [[x, z]].concat(tg.group || [])) pts.push(new THREE.Vector3(px - w, 0, pz), new THREE.Vector3(px + w, 0, pz), new THREE.Vector3(px - w, h, pz), new THREE.Vector3(px + w, h, pz), new THREE.Vector3(px, 0, pz - w), new THREE.Vector3(px, 0, pz + w));
-    out.push(screenBox(pts, W, H)); }
-  for (const o of [sc && sc.player, sc && sc.other]) if (o && o.visible !== false) { _bx.setFromObject(o); if (_bx.isEmpty()) continue; const m = _bx.min, M = _bx.max;
+    out.push(screenBox(pts, W, H)); });
+  if (!shot.hide) for (const o of [sc && sc.player, sc && sc.other]) if (o && o.visible !== false) { _bx.setFromObject(o); if (_bx.isEmpty()) continue; const m = _bx.min, M = _bx.max;
     out.push(screenBox([0, 1, 2, 3, 4, 5, 6, 7].map(i => new THREE.Vector3(i & 1 ? M.x : m.x, i & 2 ? M.y : m.y, i & 4 ? M.z : m.z)), W, H)); }
   return out.map(r => r && { l: r.l - 6, r: r.r + 6, t: r.t - 6, b: r.b + 6 });
 }
@@ -371,6 +372,36 @@ function talkPlace() {
   bubPick = { x: best.x, y: best.y, who, W };
   let side = 'n'; if (sp) { if (best.x >= sp.r - 4) side = 'r'; else if (best.x + bw <= sp.l + 4) side = 'l'; }
   b.classList.remove('r', 'l', 'n'); b.classList.add(side); b.style.left = Math.round(best.x) + 'px'; b.style.top = Math.round(best.y) + 'px';
+}
+// close-up: while an alien is speaking, the camera leaves the walking view and frames only that alien (the others and both players are
+// hidden for that frame), with the alien on one side of the screen so the bubble has the other side to itself
+const shot = { k: 0, who: -1, side: -1, hide: false, pos: new THREE.Vector3(), look: new THREE.Vector3(), cp: new THREE.Vector3(), cl: new THREE.Vector3() };
+const _o = new THREE.Vector3(), _l = new THREE.Vector3(), _d = new THREE.Vector3(), _r = new THREE.Vector3();
+function closeUp(dt) {
+  const tgs = (sc && sc.tags) || [], who = frame.classList.contains('talking') ? +$('bub').dataset.who : -1, tg = who >= 0 ? tgs[who] : null, on = !!(tg && tg.obj);
+  if (on) { const p = tg.obj.position, top = tg.pos.y - 0.3, foot = tg.foot ?? 0, span = top - foot, cy = (top + foot) / 2;
+    if (shot.who !== who) { _v.copy(p).setY(cy).project(cam); shot.side = shot.k > 0.5 ? (p.x < 0 ? -1 : 1) : (_v.x < 0 ? -1 : 1); }   // keep the alien on the side of the screen where it stood
+    tg.obj.getWorldDirection(_d); _d.y = 0; _d.normalize().multiplyScalar(0.7);   // mostly from the front of the alien, a little toward where the players stand
+    _d.add(_r.set(view.target.x - p.x, 0, view.target.z - p.z).normalize().multiplyScalar(0.3)).normalize();
+    _r.set(_d.z, 0, -_d.x);                                                       // screen-right as seen from that camera
+    const th = Math.tan(cam.fov * Math.PI / 360), d = span / 0.8 / 2 / th, halfW = d * th * cam.aspect;
+    shot.pos.copy(p).addScaledVector(_d, d).setY(cy + span * 0.06 + (tg.camUp || 0));   // camUp: look down over a table that is in the way
+    shot.look.set(p.x, cy + span * 0.1, p.z).addScaledVector(_r, -shot.side * 0.46 * halfW);   // alien at about 27% (or 73%) of the width
+    if (shot.k < 0.01 || shot.who < 0) { shot.cp.copy(shot.pos); shot.cl.copy(shot.look); }
+    shot.who = who; }
+  else shot.who = -1;
+  shot.k += ((on ? 1 : 0) - shot.k) * Math.min(1, dt * 4.5); if (shot.k < 0.003) shot.k = 0;
+  shot.hide = on && shot.k > 0.35; frame.classList.toggle('closeup', shot.hide);
+  if (!shot.k) return;
+  const f = Math.min(1, dt * 4.5); shot.cp.lerp(shot.pos, f); shot.cl.lerp(shot.look, f);   // glide from one speaker to the next
+  const e = shot.k * shot.k * (3 - 2 * shot.k);
+  _o.copy(cam.position); _l.copy(view.target).add(view.look);
+  cam.position.lerpVectors(_o, shot.cp, e); cam.lookAt(_l.lerp(shot.cl, e));
+}
+function renderShot() {
+  if (!shot.hide) { R.render(S, cam); return; }
+  const sp = sc.tags[shot.who].obj, off = (sc.aliens || []).filter(o => o !== sp && o.visible).concat([sc.player, sc.other].filter(o => o && o.visible));
+  off.forEach(o => { o.visible = false; }); R.render(S, cam); off.forEach(o => { o.visible = true; });
 }
 $('talk').addEventListener('click', e => { const t = e.target.closest('[data-t]'); talkNext(t && t.dataset.t === 'skip'); });
 
@@ -588,10 +619,10 @@ function tick() {
   const t = clock.getElapsedTime(), dt = Math.min(0.05, t - last), s = net.state; last = t;
   if (sceneName === 'title') view.yaw = 0.9 + t * 0.03;
   const hidden3d = (frame.classList.contains('working') && !frame.classList.contains('talking') && performance.now() - workSince > 1400) || frame.classList.contains('ended');
-  sc.update(t); step(dt, t); view.apply(); lockTick(s);
+  sc.update(t); step(dt, t); view.apply(); closeUp(dt); lockTick(s);
   if (marker && s) { const n = nextJob(s), j = n && plaza.JOBS.find(j => j.key === n); marker.visible = !!j;
     if (j) { marker.position.set(Math.cos(j.ang) * 15.4, 0, Math.sin(j.ang) * 15.4); marker.userData.cone.position.y = 4.2 + Math.sin(t * 4) * 0.4; marker.rotation.y = t; } }
-  if (!hidden3d) { R.render(S, cam); tags(); talkPlace(); }
+  if (!hidden3d) { renderShot(); tags(); talkPlace(); }
   if (sc.player) { net.move(sceneName, sc.player.position.x, sc.player.position.z, sc.player.rotation.y);
     if (!local.walked && sceneName === 'plaza' && local.walk0 && sc.player.position.distanceTo(local.walk0) > 2) { local.walked = true; local.walkedAt = performance.now(); } }
   if (sc.other) { const p = net.partner, here = !net.solo && p && p.scene === sceneName;

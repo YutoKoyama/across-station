@@ -63,7 +63,7 @@ export function kousin(S) {
     player: me, other: aya, lookAhead: 4, lookUp: 0.9, actLabel: null,
     walk: { ground: (x, z) => inRoom(x, z) && !inBox(x, z, 0, -2.6, 2.7, 0.7) && !inCircle(x, z, 0, -6.5, 1.9) ? 0 : null,
       interact: (x, z) => Math.hypot(x, z - 12) < 3 ? { label: '広場へ', go: () => { window.__goScene('plaza'); } } : null },
-    tags: [{ pos: new THREE.Vector3(0, 5.4, -6.5), html: '<small>使者</small>ヴェル＝ナ', col: C.teal }],
+    tags: [{ pos: new THREE.Vector3(0, 5.4, -6.5), html: '<small>使者</small>ヴェル＝ナ', col: C.teal, obj: env, foot: 0.1 }], aliens: [env, tiles],
     update(t) { env.position.y = 3.3 + Math.sin(t * 1.1) * 0.18; bell.scale.y = 1.05 + Math.sin(t * 2.2) * 0.04;
       ribbons.forEach((r, i) => { r.rotation.y = Math.sin(t * 0.9 + i) * 0.08; r.rotation.z = Math.sin(t * 1.3 + i * 2) * 0.05; });
       tiles.rotation.y = t * 0.2; },
@@ -111,7 +111,7 @@ export function bunki(S) {
     player: me, other: aya, lookAhead: 4, lookUp: 0.6, actLabel: null,
     walk: { ground: (x, z) => inRoom(x, z) && z > -10.2 && !names.some(([k, gx, gz]) => inCircle(x, z, gx, gz, 1.35)) ? 0 : null,
       interact: (x, z) => { const n = names.find(([k, gx, gz]) => inCircle(x, z, gx, gz, 2.6)); return n ? { label: n[3] + 'に質問', go: () => window.__guide && window.__guide(n[0]) } : Math.hypot(x, z - 12) < 3 ? { label: '広場へ', go: () => { window.__goScene('plaza'); } } : null; } },
-    tags: names.map(([k, x, z, n], i) => ({ pos: new THREE.Vector3(x, k === 'nana' ? 3.5 : k === 'mimi' ? 3.3 : 2.8, z), html: `<small>${i < 2 ? 'ユウが質問できる' : 'アヤが質問できる'}</small>${n}`, col: i < 2 ? C.amber : C.teal })),
+    tags: names.map(([k, x, z, n], i) => ({ pos: new THREE.Vector3(x, k === 'nana' ? 3.5 : k === 'mimi' ? 3.3 : 2.8, z), html: `<small>${i < 2 ? 'ユウが質問できる' : 'アヤが質問できる'}</small>${n}`, col: i < 2 ? C.amber : C.teal, obj: gs[i] })), aliens: gs,
     update(t) { gs.forEach((g, i) => { g.children.forEach((c, j) => { if (j > 1) c.position.y += Math.sin(t * 2 + i) * 0.0015; }); }); },
   };
 }
@@ -157,7 +157,7 @@ export function kaigi(S) {
     player: me, other: aya, lookAhead: 4.5, lookUp: 0.2, actLabel: null,
     walk: { ground: (x, z) => inRoom(x, z) && !inCircle(x, z, 0, -4, 4.1) && ![...left, ...right].some(o => inCircle(x, z, o.position.x, o.position.z, 1.2)) && !inBox(x, z, -6.5, -7.5, 0.3, 0.3) && !inBox(x, z, 6.5, -7.5, 0.3, 0.3) ? 0 : null,
       interact: (x, z) => Math.hypot(x, z - 12) < 3 ? { label: '広場へ', go: () => { window.__goScene('plaza'); } } : null },
-    tags: [{ pos: new THREE.Vector3(-4.9, 3.0, -4.0), html: '<small>クリル族の代表</small>ハサ長老', col: '#f08a6a', group: [[-4.4, -6.4], [-2.6, -8.3]] }, { pos: new THREE.Vector3(4.9, 3.4, -4.0), html: '<small>グラ族の代表</small>モス議長', col: '#8cc48a', group: [[4.4, -6.4], [2.6, -8.3]] }],
+    tags: [{ pos: new THREE.Vector3(-4.9, 3.0, -4.0), html: '<small>クリル族の代表</small>ハサ長老', col: '#f08a6a', group: [[-4.4, -6.4], [-2.6, -8.3]] }, { pos: new THREE.Vector3(4.9, 3.4, -4.0), html: '<small>グラ族の代表</small>モス議長', col: '#8cc48a', group: [[4.4, -6.4], [2.6, -8.3]] }].map((t, i) => ({ ...t, obj: [left, right][i][0], camUp: 1.4 })), aliens: [...left, ...right],
     update(t) { orb.scale.setScalar(1 + Math.sin(t * 2.4) * 0.06); left.forEach((k, i) => k.position.y = Math.abs(Math.sin(t * 1.8 + i)) * 0.04); right.forEach((g, i) => g.rotation.z = Math.sin(t * 0.9 + i) * 0.03); },
   };
 }
