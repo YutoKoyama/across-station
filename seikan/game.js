@@ -92,7 +92,7 @@ const lastRoom = () => { try { const r = JSON.parse(localStorage.getItem(KEY + '
 const saveRoom = (code, role) => { try { localStorage.setItem(KEY + 'last', JSON.stringify({ code, role, t: Date.now() })); } catch (e) {} };
 let myName = (() => { try { return localStorage.getItem(KEY + 'name') || ''; } catch (e) { return ''; } })();
 let lobby = { step: 'start', err: '' };
-export const VER = '11/15-6';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
+export const VER = '11/15-7';   // shown on the title screen: tells which version a phone is running (an old cached copy looks like a bug that was already fixed)
 $('logo').insertAdjacentHTML('beforeend', `<p class="ver">版 ${VER}</p>`);
 const local = { dict: {}, reply: [], kaigiText: '', busy: false, survey: {}, other: {}, asking: '', listening: false, noMic: false, tab: 'reply', briefSeen: {}, help: false,
   walked: false, walk0: null, sceneAt: 0, lastSig: '', lastChange: 0, seedSeen: undefined, khLen: 0 };
@@ -243,6 +243,7 @@ function render(force) {
   $('tr').innerHTML = tr;
   const co = $('coach'); co.classList.toggle('on', coach > 0); co.textContent = coach === 1 ? '← なぞって歩く' : 'なぞって見回す'; $('stick').classList.toggle('guide', coach === 1);
   const talking = working && talkNeeded(s); frame.classList.toggle('talking', !!talking); if (talking) talkShow(s, me);
+  if (act.on && !(working && !talking && sceneName === 'kousin' && s.jobs.kousin.status === 'todo' && s.jobs.kousin.stage === act.stage)) closeAct();
   if (working) renderWork(s, me, stuck);
   if (ended) renderEnd();
   fitAll();
@@ -485,9 +486,9 @@ function kousinWork(s, me) {
   const ro = (l, f) => l.map((x, i) => `<div class="rowline"><b>${i + 1}</b><span>${x.map(f).join('')}</span></div>`).join('');
   if (j.stage === 0) {      // practice: two sentences, one shared word. A has the words, B has the gestures -> match them up
     const fb = j.last === 'teach_miss' ? `<div class="msg bad">使者は首をかしげた。もう一度、照らし合わせよう</div>` : '';
-    if (me === 'A') return { L: card('mine', MINE + '：使者の言葉', ro(T.lines, plain)),
+    if (me === 'A') return { L: card('mine', actHead(MINE + '：使者の言葉', '▶ 聞く'), ro(T.lines, plain)),
       R: fb + card('q', '<span class="pbadge">練習</span>問題：返事の言葉は？', `<div class="tiles">${T.tiles.map(k => `<button class="tile ${local.reply[0] === k ? 'on' : local.reply.length ? '' : 'guide'}" data-tile="${k}"><span class="alien ${w(k).length > 3 ? 'long' : ''}">${w(k)}</span></button>`).join('')}</div>`) + `<button class="btn main ${local.reply.length === 1 ? 'guide' : ''}" data-a="ksend" ${local.reply.length === 1 ? '' : 'disabled'}>返事する</button>` };
-    return { L: card('mine', MINE + '：使者のしぐさ（順番はバラバラ）', ro(T.gestures, k => `<span style="margin-right:10px;display:inline-block">${G(k)}</span>`)),
+    return { L: card('mine', actHead(MINE + '：使者のしぐさ（順番はバラバラ）', '▶ しぐさを見る'), ro(T.gestures, k => `<span style="margin-right:10px;display:inline-block">${G(k)}</span>`)),
       R: fb + card('sup', 'あなたはサポート役', `相棒が返事の言葉を選ぶ。返事は<b>「${JA(T.target)}」</b>の言葉。<br>「${G(T.target)}」が出る文はどっち？ 相棒に伝えて、言葉と照らし合わせよう`) };
   }
   // after a miss the numbers are for B only: A has to ask. From the 3rd miss the send button rests (the lock is in the state; A is the host, so its clock is the one that counts)
@@ -498,7 +499,7 @@ function kousinWork(s, me) {
       : `<div class="msg bad">相棒の返事：合っている言葉 ${j.hit.words}/3・並び順も合っている ${j.hit.pos}/3。相棒に伝えよう${j.gave ? '<br>使者が1語、言い直した（相棒の画面に出る）' : ''}${j.misses >= L.KOUSIN_LOCK_FROM ? '<br>次の返事まで少し待つ' : ''}</div>`;
   if (me === 'A') {
     const uniq = [...new Set(p.lines.flat().concat(p.question).map(w))].filter(x => !known[x]), memoOn = local.tab === 'memo';
-    const lhead = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><small style="flex:1;margin:0;font-size:13px;font-weight:800;color:var(--mine)">${MINE}：使者の言葉</small><button class="btn sm" data-tab="${memoOn ? 'reply' : 'memo'}">${memoOn ? '返事にもどる' : '意味メモ'}</button></div>`;
+    const lhead = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><small style="flex:1;margin:0;font-size:13px;font-weight:800;color:var(--mine)">${MINE}：使者の言葉</small><button class="btn sm ${local.actSeen ? '' : 'guide'}" data-act="1">▶ 聞く</button><button class="btn sm" data-tab="${memoOn ? 'reply' : 'memo'}">${memoOn ? '返事にもどる' : '意味メモ'}</button></div>`;
     const body = memoOn
       ? (local.memoPick && uniq.includes(local.memoPick)
         // choosing a meaning: buttons inside the game screen (a phone's own menu would not turn with the rotated screen)
@@ -508,9 +509,64 @@ function kousinWork(s, me) {
           <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn sm" data-a="kclear" style="flex:1">消す</button><button class="btn main sm ${local.reply.length === 3 && !lock ? 'guide' : ''}" style="flex:2" data-a="ksend" ${local.reply.length === 3 && !lock ? '' : 'disabled'}>${lock ? `あと<span class="lockn">${lock}</span>秒` : '伝える'}</button></div>`);
     return { L: `<div class="card mine">${lhead}<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.question.map(al).join('')}</span></div>` + p.lines.map((l, i) => `<div class="rowline"><b>${i + 1}</b><span>${l.map(al).join('')}</span></div>`).join('') + '</div>', R: fb + body };
   }
-  return { L: card('mine', MINE + '：使者のしぐさ（順番はバラバラ）', `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.gestures[3].map(G).join('　／　')}</span></div>` + p.gestures.slice(0, 3).map((g, i) => `<div class="rowline"><b>${i + 1}</b><span>${g.map(G).join('　／　')}</span></div>`).join('')),
+  return { L: card('mine', actHead(MINE + '：使者のしぐさ（順番はバラバラ）', '▶ しぐさを見る'), `<div class="rowline"><b style="background:var(--amber);color:#1a1300">問</b><span>${p.gestures[3].map(G).join('　／　')}</span></div>` + p.gestures.slice(0, 3).map((g, i) => `<div class="rowline"><b>${i + 1}</b><span>${g.map(G).join('　／　')}</span></div>`).join('')),
     R: fb + card('sup', 'あなたはサポート役', `相棒が返事を3語で組む。教えること：<br>① 返事の中身は<b>「わたし」「食べ物」「あげる」</b><br>② 左のしぐさが、どの文に出るか。相棒の言葉と照らし合わせよう`) };
 }
+
+// the envoy acts it out: B watches the gestures (no words), A hears the words (no gestures). Same sentences, same order as the cards.
+const actHead = (label, btn) => `<span style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><small style="flex:1;margin:0;font-size:13px;font-weight:800;color:var(--mine)">${label}</small><button class="btn sm ${local.actSeen ? '' : 'guide'}" data-act="1">${btn}</button></span>`;
+const ENVOY = `<svg class="env" viewBox="0 0 200 200" aria-hidden="true">
+  <g class="star"><path d="M176 14l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z" fill="#ffd27a"/><circle cx="176" cy="30" r="22" fill="#ffd27a" opacity=".18"/></g>
+  <g class="body">
+    <g class="rib">${[70, 85, 100, 115, 130].map((x, i) => `<path d="M${x} 116 q${i % 2 ? 9 : -9} 22 0 40 q${i % 2 ? -9 : 9} 18 0 36" style="animation-delay:${-i * 0.37}s"/>`).join('')}</g>
+    <path d="M44 114Q42 38 100 36Q158 38 156 114Q100 128 44 114z" fill="#7ff0dc" fill-opacity=".88" stroke="#3fd6bd" stroke-width="3"/>
+    <path d="M60 60Q78 44 100 44" stroke="#fff" stroke-opacity=".55" stroke-width="5" fill="none" stroke-linecap="round"/>
+    ${[[78, 80, 10], [122, 80, 10], [100, 60, 8]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#f8fbff"/><circle class="pupil" cx="${x}" cy="${y + 1}" r="${r * 0.48}" fill="#10203a"/>`).join('')}
+    <ellipse class="mouth" cx="100" cy="102" rx="7" ry="2.5" fill="#1d4f4a"/>
+  </g>
+  <g class="arm">
+    <path d="M138 106Q163 98 184 106" stroke="#1b6f66" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M138 106Q163 98 184 106" stroke="#8ff5e4" stroke-width="8" stroke-linecap="round" fill="none"/>
+    <g class="hand"><ellipse cx="196" cy="105" rx="7" ry="3.2" fill="#ffe3a3" stroke="#a9772e" stroke-width="2"/><circle cx="186" cy="106" r="8.5" fill="#ffe3a3" stroke="#a9772e" stroke-width="2"/></g>
+    <g class="p p-water"><path d="M176 96h22l-3 22h-16z" fill="#dfe8ff" stroke="#9fb0d8" stroke-width="2"/><path d="M178 102h18l-2 14h-14z" fill="#4aa8ff"/></g>
+    <g class="p p-food"><circle cx="190" cy="96" r="12" fill="#ff8a5c"/><path d="M190 84q6-8 12-4q-6 6-12 4z" fill="#5fbf6a"/><circle cx="186" cy="92" r="3" fill="#fff" opacity=".6"/></g>
+    <g class="p p-give"><rect x="180" y="88" width="24" height="20" rx="3" fill="#ffb547"/><path d="M192 88v20M180 98h24" stroke="#c44" stroke-width="3"/></g>
+  </g>
+</svg>`;
+const act = { on: false, timers: [], rows: [], mode: 'g', stage: -1, pick: 0 };
+function actRows(s, me) {
+  const p = L.kousinNow(s), T = p.teach, j = s.jobs.kousin;
+  if (j.stage === 0) return (me === 'A' ? T.lines : T.gestures).map((l, i) => ({ n: String(i + 1), l }));
+  return [{ n: '問', l: me === 'A' ? p.question : p.gestures[3] }].concat((me === 'A' ? p.lines : p.gestures.slice(0, 3)).map((l, i) => ({ n: String(i + 1), l })));
+}
+function openAct(s, me) {
+  act.on = true; act.mode = me === 'A' ? 'w' : 'g'; act.stage = s.jobs.kousin.stage; act.rows = actRows(s, me); act.pick = 0; local.actSeen = true;
+  const A = act.mode === 'w', el = $('act');
+  el.innerHTML = `<div class="stage">${ENVOY}<div class="say"></div></div><div class="side">
+    <small>${A ? '使者が話す言葉（あなたにだけ聞こえる）' : '使者のしぐさ（あなたにだけ見える）'}</small>
+    <div class="rowsel">${act.rows.map((r, i) => `<button class="btn" data-row="${i}">${r.n === '問' ? '問' : r.n + '文目'}</button>`).join('')}</div>
+    <div class="seq"></div>
+    <div class="note">${A ? 'しぐさは見えない。しぐさは相棒にだけ見える' : '言葉は聞こえない。言葉は相棒にだけ聞こえる'}</div>
+    <button class="btn main" data-row="close">閉じる</button></div>`;
+  el.classList.add('on'); actPlay(0); render(true);
+}
+function actStop() { act.timers.forEach(clearTimeout); act.timers = []; try { speechSynthesis.cancel(); } catch (e) {} }
+function closeAct() { actStop(); act.on = false; $('act').classList.remove('on'); $('act').innerHTML = ''; }
+function actPlay(i) {
+  actStop(); act.pick = i; const el = $('act'), svg = el.querySelector('.env'), say = el.querySelector('.say'), seq = el.querySelector('.seq'), r = act.rows[i], A = act.mode === 'w';
+  const p = L.kousinNow(net.state), label = k => A ? p.words[k] : L.CONCEPTS[k].gesture;
+  el.querySelectorAll('[data-row]').forEach(b => b.classList.toggle('on', b.dataset.row === String(i)));
+  seq.innerHTML = r.l.map(k => `<span class="${A ? 'alien' : ''}">${label(k)}</span>`).join(A ? '' : '<i>／</i>');
+  const spans = [...seq.querySelectorAll('span')], BEAT = A ? 1100 : 1900;
+  const set = (cls, k) => { svg.setAttribute('class', 'env ' + cls); spans.forEach((x, j) => x.classList.toggle('now', j === k)); };
+  set('idle', -1); say.className = 'say';
+  r.l.forEach((k, n) => act.timers.push(setTimeout(() => {
+    if (A) { set('talk', n); say.className = 'say on'; say.textContent = p.words[k];
+      try { const u = new SpeechSynthesisUtterance(p.words[k]); u.lang = 'ja-JP'; u.pitch = 1.8; u.rate = 0.75; speechSynthesis.speak(u); } catch (e) {} }
+    else { set('g-' + k, n); say.className = 'say on mute'; say.textContent = '♪〜'; }
+  }, 350 + n * BEAT)));
+  act.timers.push(setTimeout(() => { set('idle', -1); say.className = 'say'; }, 350 + r.l.length * BEAT));
+}
+$('act').addEventListener('click', e => { const b = e.target.closest('[data-row]'); if (!b) return; if (b.dataset.row === 'close') { closeAct(); return; } actPlay(+b.dataset.row); });
 
 // 分岐路 ---------------------------------------------------------------
 function bunkiWork(s, me) {
@@ -561,6 +617,7 @@ async function onAct(e) {
   if (d.a === 'plaza') { local.help = false; window.__goScene('plaza'); return; }
   if (d.a === 'swap') { net.role = me === 'A' ? 'B' : 'A'; local.reply = []; render(true); return; }
   if (d.a === 'warp') { const n = nextJob(s); if (n) window.__goScene(n); return; }
+  if (d.act) { openAct(s, me); return; }
   if (d.a === 'help') { local.help = true; try { document.activeElement && document.activeElement.blur(); } catch (err) {} render(true); fitAll(); return; }   // close the keyboard first, or the card is laid out for half a screen and its buttons fall off
   if (d.a === 'brief') { local.briefSeen[sceneName] = true; local.help = false; render(true); return; }
   if (d.tut) { net.act({ t: 'tut_pick', color: d.tut, role: me }); return; }
